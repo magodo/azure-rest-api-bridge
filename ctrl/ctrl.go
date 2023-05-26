@@ -17,44 +17,46 @@ import (
 )
 
 type Option struct {
-	ExecFile    string
-	MockSrvAddr string
-	MockSrvPort int
+	ConfigFile   string
+	ServerOption mockserver.Option
 }
 
 type Ctrl struct {
-	MockSrvAddr string
-	MockSrvPort int
-	ExecSpec    ExecSpec
+	ExecSpec   ExecSpec
+	MockServer mockserver.Server
 }
 
 func NewCtrl(opt Option) (*Ctrl, error) {
 	parser := hclparse.NewParser()
-	f, diags := parser.ParseHCLFile(opt.ExecFile)
+	f, diags := parser.ParseHCLFile(opt.ConfigFile)
 	if diags.HasErrors() {
-		return nil, fmt.Errorf("parsing %s: %v", opt.ExecFile, diags.Error())
+		return nil, fmt.Errorf("parsing %s: %v", opt.ConfigFile, diags.Error())
 	}
 	var execSpec ExecSpec
 	ctx := &hcl.EvalContext{
 		Variables: map[string]cty.Value{
-			"server_addr": cty.StringVal(fmt.Sprintf("%s:%d", opt.MockSrvAddr, opt.MockSrvPort)),
+			"server_addr": cty.StringVal(fmt.Sprintf("%s:%d", opt.ServerOption.Addr, opt.ServerOption.Port)),
 		},
 	}
 	if diags := gohcl.DecodeBody(f.Body, ctx, &execSpec); diags.HasErrors() {
-		return nil, fmt.Errorf("decoding %s: %v", opt.ExecFile, diags.Error())
+		return nil, fmt.Errorf("decoding %s: %v", opt.ConfigFile, diags.Error())
+	}
+
+	srv, err := mockserver.New(opt.ServerOption)
+	if err != nil {
+		return nil, fmt.Errorf("creating mock server: %v", err)
 	}
 
 	return &Ctrl{
-		MockSrvAddr: opt.MockSrvAddr,
-		MockSrvPort: opt.MockSrvPort,
-		ExecSpec:    execSpec,
+		ExecSpec:   execSpec,
+		MockServer: *srv,
 	}, nil
 }
 
 func (ctrl *Ctrl) Run(ctx context.Context) error {
 	// Start mock server
-	srv, closeCh, err := mockserver.Serve(fmt.Sprintf("%s:%d", ctrl.MockSrvAddr, ctrl.MockSrvPort))
-	if err != nil {
+	log.Info("Starting the mock server")
+	if err := ctrl.MockServer.Start(); err != nil {
 		return err
 	}
 
@@ -80,21 +82,23 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			Stderr: &stderr,
 		}
 
-		log.Debug("command", "path", execution.Path, "args", execution.Args, "env", env, "dir", execution.Dir)
+		log.Info(fmt.Sprintf("Executing %s", execution.Name))
+
+		log.Debug("execution detail", "path", execution.Path, "args", execution.Args, "env", env, "dir", execution.Dir)
 
 		if err := cmd.Run(); err != nil {
 			log.Error("run failure", "stdout", stdout.String(), "stderr", stderr.String())
 			return fmt.Errorf("running execution %q: %v", execution.Name, err)
 		}
 
-		log.Info(stdout.String())
+		log.Info("stdout", "message", stdout.String())
 	}
 
 	// Stop mock server
-	if err := srv.Shutdown(ctx); err != nil {
+	log.Info("Stopping the mock server")
+	if err := ctrl.MockServer.Stop(ctx); err != nil {
 		return err
 	}
-	<-closeCh
 
 	return nil
 }

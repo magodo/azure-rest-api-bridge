@@ -8,13 +8,16 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/magodo/azure-rest-api-bridge/ctrl"
 	"github.com/magodo/azure-rest-api-bridge/log"
+	"github.com/magodo/azure-rest-api-bridge/mockserver"
 )
 
 func main() {
 	addr := flag.String("addr", "localhost", "Mock server address")
 	port := flag.Int("port", 8888, "Mock server port")
-	specFile := flag.String("spec", "", "Execution spec file")
-	verbose := flag.Bool("verbose", false, "Show debug log")
+	configFile := flag.String("config", "", "Execution config file")
+	verbose := flag.Bool("verbose", false, "Be verbose")
+	specdir := flag.String("specdir", "", "Swagger specification directory")
+	index := flag.String("index", "", "Swagger index file")
 
 	flag.Parse()
 
@@ -30,14 +33,19 @@ func main() {
 	log.SetLogger(logger)
 
 	ctrl, err := ctrl.NewCtrl(ctrl.Option{
-		MockSrvAddr: *addr,
-		MockSrvPort: *port,
-		ExecFile:    *specFile,
+		ConfigFile: *configFile,
+		ServerOption: mockserver.Option{
+			Addr:    *addr,
+			Port:    *port,
+			Index:   *index,
+			SpecDir: *specdir,
+		},
 	})
 	if err != nil {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
+
 	if err := ctrl.Run(context.TODO()); err != nil {
 		log.Error(err.Error())
 		os.Exit(1)
