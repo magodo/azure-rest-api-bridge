@@ -1,0 +1,47 @@
+{
+    "paths": {
+        "p1": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "$ref": "#/responses/FromB"
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "Concrete": {
+            "description": "Concrete"
+        },
+        "FromB": {
+            "description": "FromB",
+            "$ref": "b/b.json#/responses/FromA"
+        }
+    },
+    "definitions": {
+        "ConcreteModel": {
+            "description": "ConcreteModel"
+        },
+        "Model1": {
+            "description": "Model1",
+            "$ref": "#/definitions/ConcreteModel"
+        },
+        "Model2": {
+            "description": "Model2",
+            "$ref": "#/definitions/Model1"
+        },
+        "Circle1": {
+            "description": "Circle1",
+            "$ref": "#/definitions/Circle2"
+        },
+        "Circle2": {
+            "description": "Circle2",
+            "$ref": "#/definitions/Circle1"
+        },
+        "FromB": {
+            "description": "FromB",
+            "$ref": "b/b.json#/definitions/FromA"
+        }
+    }
+}

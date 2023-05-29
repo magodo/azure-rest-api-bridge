@@ -1,0 +1,14 @@
+{
+    "definitions": {
+        "FromA": {
+            "description": "FromA",
+            "$ref": "../a.json#/definitions/ConcreteModel"
+        }
+    },
+    "responses": {
+        "FromA": {
+            "description": "FromA",
+            "$ref": "../a.json#/responses/Concrete"
+        }
+    }
+}
