@@ -22,7 +22,7 @@ type Option struct {
 }
 
 type Ctrl struct {
-	ExecSpec   ExecSpec
+	ExecSpec   Config
 	MockServer mockserver.Server
 }
 
@@ -32,7 +32,7 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 	if diags.HasErrors() {
 		return nil, fmt.Errorf("parsing %s: %v", opt.ConfigFile, diags.Error())
 	}
-	var execSpec ExecSpec
+	var execSpec Config
 	ctx := &hcl.EvalContext{
 		Variables: map[string]cty.Value{
 			"server_addr": cty.StringVal(fmt.Sprintf("%s:%d", opt.ServerOption.Addr, opt.ServerOption.Port)),

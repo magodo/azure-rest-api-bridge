@@ -1,6 +1,6 @@
 package ctrl
 
-type ExecSpec struct {
+type Config struct {
 	Overrides  []Override  `hcl:"override,block"`
 	Executions []Execution `hcl:"execution,block"`
 }
