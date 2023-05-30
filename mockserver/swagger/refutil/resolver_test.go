@@ -22,6 +22,8 @@ func TestRResolve(t *testing.T) {
 		visited    map[string]bool
 		outDesc    string
 		outVisited map[string]bool
+		outOwnRef  string
+		outOK      bool
 	}{
 		{
 			name:    "#/definitions/ConcreteModel",
@@ -31,6 +33,8 @@ func TestRResolve(t *testing.T) {
 			outVisited: map[string]bool{
 				specpathA + "#/definitions/ConcreteModel": true,
 			},
+			outOwnRef: specpathA + "#/definitions/ConcreteModel",
+			outOK:     true,
 		},
 		{
 			name: "#/definitions/ConcreteModel (visited)",
@@ -42,6 +46,7 @@ func TestRResolve(t *testing.T) {
 			outVisited: map[string]bool{
 				specpathA + "#/definitions/ConcreteModel": true,
 			},
+			outOwnRef: "",
 		},
 		{
 			name:    "#/definitions/Model1",
@@ -52,6 +57,8 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/Model1":        true,
 				specpathA + "#/definitions/ConcreteModel": true,
 			},
+			outOwnRef: specpathA + "#/definitions/ConcreteModel",
+			outOK:     true,
 		},
 		{
 			name: "#/definitions/Model1 (visited)",
@@ -64,6 +71,7 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/Model1":        true,
 				specpathA + "#/definitions/ConcreteModel": true,
 			},
+			outOwnRef: specpathA + "#/definitions/Model1",
 		},
 		{
 			name:    "#/definitions/Model2",
@@ -75,6 +83,8 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/Model2":        true,
 				specpathA + "#/definitions/ConcreteModel": true,
 			},
+			outOwnRef: specpathA + "#/definitions/ConcreteModel",
+			outOK:     true,
 		},
 		{
 			name:    "#/definitions/Circle1",
@@ -85,6 +95,7 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/Circle1": true,
 				specpathA + "#/definitions/Circle2": true,
 			},
+			outOwnRef: specpathA + "#/definitions/Circle2",
 		},
 		{
 			name:    "#/definitions/Circle2",
@@ -95,6 +106,7 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/Circle1": true,
 				specpathA + "#/definitions/Circle2": true,
 			},
+			outOwnRef: specpathA + "#/definitions/Circle1",
 		},
 		{
 			name:    "#/definitions/FromB",
@@ -106,6 +118,8 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/FromB":         true,
 				specpathB + "#/definitions/FromA":         true,
 			},
+			outOwnRef: specpathA + "#/definitions/ConcreteModel",
+			outOK:     true,
 		},
 		{
 			name:    specpathA + "#/definitions/FromB",
@@ -117,6 +131,8 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/FromB":         true,
 				specpathB + "#/definitions/FromA":         true,
 			},
+			outOwnRef: specpathA + "#/definitions/ConcreteModel",
+			outOK:     true,
 		},
 		{
 			name:    "b/b.json#/definitions/FromA",
@@ -127,6 +143,8 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/ConcreteModel": true,
 				specpathB + "#/definitions/FromA":         true,
 			},
+			outOwnRef: specpathA + "#/definitions/ConcreteModel",
+			outOK:     true,
 		},
 		{
 			name:    specpathB + "#/definitions/FromA",
@@ -137,18 +155,32 @@ func TestRResolve(t *testing.T) {
 				specpathA + "#/definitions/ConcreteModel": true,
 				specpathB + "#/definitions/FromA":         true,
 			},
+			outOwnRef: specpathA + "#/definitions/ConcreteModel",
+			outOK:     true,
 		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			schema, visited, err := RResolve(specpathA, spec.MustCreateRef(tt.ref), tt.visited)
+			schema, ownRef, visited, ok, err := RResolve(specpathA,
+				spec.Schema{
+					SchemaProps: spec.SchemaProps{
+						Ref: spec.MustCreateRef(tt.ref),
+					},
+				},
+				tt.visited)
 			require.NoError(t, err)
 			require.Equal(t, tt.outVisited, visited)
+			require.Equal(t, tt.outOK, ok)
 			if schema == nil {
 				require.Equal(t, tt.outDesc, "")
 			} else {
 				require.Equal(t, tt.outDesc, schema.Description)
+			}
+			if ownRef == nil {
+				require.Equal(t, tt.outOwnRef, "")
+			} else {
+				require.Equal(t, tt.outOwnRef, ownRef.String())
 			}
 		})
 	}
@@ -167,6 +199,8 @@ func TestRResolveResponse(t *testing.T) {
 		visited    map[string]bool
 		outDesc    string
 		outVisited map[string]bool
+		outOwnRef  string
+		outOK      bool
 	}{
 		{
 			name:    "#/paths/p1/get/responses/200",
@@ -179,18 +213,26 @@ func TestRResolveResponse(t *testing.T) {
 				specpathA + "#/responses/FromB":            true,
 				specpathB + "#/responses/FromA":            true,
 			},
+			outOwnRef: specpathA + "#/responses/Concrete",
+			outOK:     true,
 		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			schema, visited, err := RResolveResponse(specpathA, spec.MustCreateRef(tt.ref), tt.visited)
+			schema, ownRef, visited, ok, err := RResolveResponse(specpathA, spec.Response{Refable: spec.Refable{Ref: spec.MustCreateRef(tt.ref)}}, tt.visited)
 			require.NoError(t, err)
 			require.Equal(t, tt.outVisited, visited)
+			require.Equal(t, tt.outOK, ok)
 			if schema == nil {
 				require.Equal(t, tt.outDesc, "")
 			} else {
 				require.Equal(t, tt.outDesc, schema.Description)
+			}
+			if ownRef == nil {
+				require.Equal(t, tt.outOwnRef, "")
+			} else {
+				require.Equal(t, tt.outOwnRef, ownRef.String())
 			}
 		})
 	}

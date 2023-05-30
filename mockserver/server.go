@@ -78,7 +78,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 	swg := doc.Spec()
 
-	log.Debug("get operation", "file", specFile, "ptr", ref.GetPointer().String())
+	log.Debug("get operation", "file", specFile, "ref", ref.String())
 	opRaw, _, err := ref.GetPointer().Get(swg)
 	if err != nil {
 		writeError(err)

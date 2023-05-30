@@ -1,0 +1,68 @@
+{
+    "paths": {
+        "/p1": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "schema": {
+                            "$ref": "#/definitions/Pet"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "Pet": {
+            "description": "Pet",
+            "type": "object",
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "Dog",
+                        "Cat"
+                    ]
+                },
+                "nickname": {
+                    "type": "string"
+                }
+            }
+        },
+        "Dog": {
+            "description": "Dog",
+            "type": "object",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/Pet"
+                }
+            ],
+            "properties": {
+                "cat_friends": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Cat"
+                    }
+                }
+            }
+        },
+        "Cat": {
+            "description": "Cat",
+            "type": "object",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/Pet"
+                }
+            ],
+            "properties": {
+                "dog_friends": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Dog"
+                    }
+                }
+            }
+        }
+    }
+}

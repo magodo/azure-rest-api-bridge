@@ -6,79 +6,80 @@ import (
 	"github.com/go-openapi/spec"
 )
 
-// Recurisvely resolve response ref
-func RResolveResponse(specpath string, ref spec.Ref, visitedRefs map[string]bool) (*spec.Response, map[string]bool, error) {
+// RResolveResponse recursively resolve a response's ref until it is a concrete schema (no ref anymore), or until an already visited reference is hit.
+// All the visited references are recorded and returned. Meanwhile, the final response and its normalized pointing reference is returned together.
+// If an already visited reference is hit, the response and the pointing reference is the one before the already visited reference, and the returned ok is false.
+func RResolveResponse(specpath string, resp spec.Response, visitedRefs map[string]bool) (*spec.Response, *spec.Ref, map[string]bool, bool, error) {
 	visited := map[string]bool{}
 	for k, v := range visitedRefs {
 		visited[k] = v
 	}
 
-	var (
-		err  error
-		resp *spec.Response
-	)
+	var respRef *spec.Ref
 	for {
-		ref, err = NormalizeFileRef(ref, specpath)
+		ref := resp.Ref
+		if ref.String() == "" {
+			return &resp, respRef, visited, true, nil
+		}
+
+		ref, err := NormalizeFileRef(ref, specpath)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, false, err
 		}
 
 		// Return the response if already visited
 		if _, ok := visited[ref.String()]; ok {
-			return resp, visited, nil
+			return &resp, respRef, visited, false, nil
 		}
+
+		respRef = &ref
+		specpath = ref.GetURL().Path
 
 		visited[ref.String()] = true
 
-		resp, err = spec.ResolveResponse(nil, ref)
+		presp, err := spec.ResolveResponse(nil, *respRef)
 		if err != nil {
-			return nil, nil, fmt.Errorf("resolving %s: %v", ref.String(), err)
+			return nil, nil, nil, false, fmt.Errorf("resolving %s: %v", ref.String(), err)
 		}
-
-		specpath = ref.GetURL().Path
-		ref = resp.Ref
-
-		// Not a reference any more, just return
-		if resp.Ref.String() == "" {
-			return resp, visited, nil
-		}
+		resp = *presp
 	}
 }
 
-func RResolve(specpath string, ref spec.Ref, visitedRefs map[string]bool) (*spec.Schema, map[string]bool, error) {
+// RResolve recursively resolve a schema's ref until it is a concrete schema (no ref anymore), or until an already visited reference is hit.
+// All the visited references are recorded and returned. Meanwhile, the final schema and its normalized pointing reference is returned together.
+// If an already visited reference is hit, the schema and the pointing reference is the one before the already visited reference, and the returned ok is false.
+func RResolve(specpath string, schema spec.Schema, visitedRefs map[string]bool) (*spec.Schema, *spec.Ref, map[string]bool, bool, error) {
 	visited := map[string]bool{}
 	for k, v := range visitedRefs {
 		visited[k] = v
 	}
 
-	var (
-		err    error
-		schema *spec.Schema
-	)
+	var schemaRef *spec.Ref
+
 	for {
-		ref, err = NormalizeFileRef(ref, specpath)
+		ref := schema.Ref
+		if ref.String() == "" {
+			return &schema, schemaRef, visited, true, nil
+		}
+
+		ref, err := NormalizeFileRef(ref, specpath)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, false, err
 		}
 
-		// Return the response if already visited
+		// Return the schema if already visited
 		if _, ok := visited[ref.String()]; ok {
-			return schema, visited, nil
+			return &schema, schemaRef, visited, false, nil
 		}
-
 		visited[ref.String()] = true
 
-		schema, err = spec.ResolveRefWithBase(nil, &ref, nil)
-		if err != nil {
-			return nil, nil, fmt.Errorf("resolving %s: %v", ref.String(), err)
-		}
-
+		schemaRef = &ref
 		specpath = ref.GetURL().Path
-		ref = schema.Ref
 
-		// Not a reference any more, just return
-		if schema.Ref.String() == "" {
-			return schema, visited, nil
+		pschema, err := spec.ResolveRefWithBase(nil, schemaRef, nil)
+		if err != nil {
+			return nil, nil, nil, false, fmt.Errorf("resolving %s: %v", schemaRef.String(), err)
 		}
+		schema = *pschema
 	}
 }
