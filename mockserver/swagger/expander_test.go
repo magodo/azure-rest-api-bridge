@@ -195,7 +195,7 @@ func TestExpand(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			ref := spec.MustCreateRef(tt.ref)
-			exp, err := NewExpander(ref)
+			exp, err := NewExpanderFromGet(ref)
 			require.NoError(t, err)
 			require.NoError(t, exp.Expand())
 			doc, err := loads.Spec(ref.GetURL().Path)

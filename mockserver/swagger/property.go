@@ -89,3 +89,38 @@ type Property struct {
 	// At most one of Children, Element and Variant is non nil
 	Variant map[string]*Property
 }
+
+// PropWalkFunc is invoked during the property tree walking. If it returns false, it will stop walking at that property.
+type PropWalkFunc func(p *Property) bool
+
+// Walk walks the property tree in depth first order
+func (prop *Property) Walk(fn PropWalkFunc) {
+	if prop == nil {
+		return
+	}
+	if !fn(prop) {
+		return
+	}
+	for _, p := range prop.Children {
+		p.Walk(fn)
+	}
+	prop.Element.Walk(fn)
+	for _, p := range prop.Variant {
+		p.Walk(fn)
+	}
+}
+
+func (prop Property) VariantName() string {
+	if len(prop.addr) == 0 {
+		return ""
+	}
+	lastStep := prop.addr[len(prop.addr)-1]
+	if lastStep.Type != PropertyAddrStepTypeVariant {
+		return ""
+	}
+	return lastStep.Value
+}
+
+func (prop Property) String() string {
+	return prop.addr.String()
+}

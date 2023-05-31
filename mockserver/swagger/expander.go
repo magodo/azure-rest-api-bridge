@@ -15,9 +15,31 @@ type Expander struct {
 	root *Property
 }
 
-// NewExpander create a expander for the successful response schema of an operation referenced by the input json reference.
-// The reference must be a normalized reference to the get operation.
+// NewExpander create a expander for the schema referenced by the input json reference.
+// The reference must be a normalized reference.
 func NewExpander(ref spec.Ref) (*Expander, error) {
+	psch, ownRef, visited, ok, err := refutil.RResolve(ref, nil, false)
+	if err != nil {
+		return nil, fmt.Errorf("recursively resolve schema: %v", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("circular ref found when resolving schema: %s", &ref)
+	}
+
+	return &Expander{
+		ref: ref,
+		root: &Property{
+			Schema:      psch,
+			ref:         ownRef,
+			addr:        RootAddr,
+			visitedRefs: visited,
+		},
+	}, nil
+}
+
+// NewExpanderFromGet create a expander for the successful response schema of an operation referenced by the input json reference.
+// The reference must be a normalized reference to the get operation.
+func NewExpanderFromGet(ref spec.Ref) (*Expander, error) {
 	if !ref.HasFullFilePath {
 		return nil, fmt.Errorf("reference %s is not normalized", &ref)
 	}
@@ -45,7 +67,7 @@ func NewExpander(ref spec.Ref) (*Expander, error) {
 
 	// In case the response is a ref itself, follow it
 	respref := refutil.Append(ref, "responses", "200")
-	_, respref, visited, ok, err := refutil.RResolveResponse(respref, nil, false)
+	_, respref, _, ok, err := refutil.RResolveResponse(respref, nil, false)
 	if err != nil {
 		return nil, fmt.Errorf("recursively resolve response ref %s: %v", &respref, err)
 	}
@@ -53,23 +75,11 @@ func NewExpander(ref spec.Ref) (*Expander, error) {
 		return nil, fmt.Errorf("circular ref found when resolving response ref %s", &respref)
 	}
 
-	psch, ownRef, visited, ok, err := refutil.RResolve(refutil.Append(respref, "schema"), nil, false)
-	if err != nil {
-		return nil, fmt.Errorf("recursively resolve response schema: %v", err)
-	}
-	if !ok {
-		return nil, fmt.Errorf("circular ref found when resolving response schema")
-	}
+	return NewExpander(refutil.Append(respref, "schema"))
+}
 
-	return &Expander{
-		ref: ref,
-		root: &Property{
-			Schema:      psch,
-			ref:         ownRef,
-			addr:        RootAddr,
-			visitedRefs: visited,
-		},
-	}, nil
+func (e *Expander) Root() *Property {
+	return e.root
 }
 
 func (e *Expander) Expand() error {
@@ -112,7 +122,7 @@ func (e *Expander) expandPropStep(prop *Property) error {
 		return e.expandPropStepAsArray(prop)
 	case "object":
 		if schema.Discriminator == "" {
-			if schemaIsMap(schema) {
+			if SchemaIsMap(schema) {
 				return e.expandPropAsMap(prop)
 			}
 			return e.expandPropAsRegularObject(prop)
@@ -124,7 +134,7 @@ func (e *Expander) expandPropStep(prop *Property) error {
 
 func (e *Expander) expandPropStepAsArray(prop *Property) error {
 	schema := prop.Schema
-	if !schemaIsArray(schema) {
+	if !SchemaIsArray(schema) {
 		return fmt.Errorf("%s: is not array", prop.addr)
 	}
 	addr := append(prop.addr, PropertyAddrStep{
@@ -151,7 +161,7 @@ func (e *Expander) expandPropStepAsArray(prop *Property) error {
 
 func (e *Expander) expandPropAsMap(prop *Property) error {
 	schema := prop.Schema
-	if !schemaIsMap(schema) {
+	if !SchemaIsMap(schema) {
 		return fmt.Errorf("%s: is not map", prop.addr)
 	}
 	addr := append(PropertyAddr{}, prop.addr...)
@@ -180,7 +190,7 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 	schema := prop.Schema
 
-	if !schemaIsObject(schema) {
+	if !SchemaIsObject(schema) {
 		return fmt.Errorf("%s: is not object", prop.addr)
 	}
 
@@ -240,7 +250,7 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 
 func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 	schema := prop.Schema
-	if !schemaIsObject(schema) {
+	if !SchemaIsObject(schema) {
 		return fmt.Errorf("%s: is not object", prop.addr)
 	}
 	prop.Variant = map[string]*Property{}
@@ -286,14 +296,14 @@ func schemaTypeIsObject(schema *spec.Schema) bool {
 	return len(schema.Type) == 0 || len(schema.Type) == 1 && schema.Type[0] == "object"
 }
 
-func schemaIsArray(schema *spec.Schema) bool {
+func SchemaIsArray(schema *spec.Schema) bool {
 	return len(schema.Type) == 1 && schema.Type[0] == "array"
 }
 
-func schemaIsObject(schema *spec.Schema) bool {
-	return schemaTypeIsObject(schema) && !schemaIsMap(schema)
+func SchemaIsObject(schema *spec.Schema) bool {
+	return schemaTypeIsObject(schema) && !SchemaIsMap(schema)
 }
 
-func schemaIsMap(schema *spec.Schema) bool {
+func SchemaIsMap(schema *spec.Schema) bool {
 	return schemaTypeIsObject(schema) && len(schema.Properties) == 0 && schema.AdditionalProperties != nil
 }

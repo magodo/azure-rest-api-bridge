@@ -1,0 +1,36 @@
+{
+    "definitions": {
+        "object": {
+            "type": "object",
+            "properties": {
+                "number": {
+                    "type": "number"
+                },
+                "integer": {
+                    "type": "integer"
+                },
+                "string": {
+                    "type": "string"
+                },
+                "boolean": {
+                    "type": "boolean"
+                },
+                "object": {
+                    "type": "object"
+                },
+                "array": {
+                    "type": "array",
+                    "items":  {
+                        "type": "string"
+                    }
+                },
+                "map": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}
