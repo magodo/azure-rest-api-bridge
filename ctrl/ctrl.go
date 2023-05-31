@@ -32,9 +32,15 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 	if diags.HasErrors() {
 		return nil, fmt.Errorf("parsing %s: %v", opt.ConfigFile, diags.Error())
 	}
+
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("getting user home dir: %v", err)
+	}
 	var execSpec Config
 	ctx := &hcl.EvalContext{
 		Variables: map[string]cty.Value{
+			"home":        cty.StringVal(homedir),
 			"server_addr": cty.StringVal(fmt.Sprintf("%s:%d", opt.ServerOption.Addr, opt.ServerOption.Port)),
 		},
 	}
