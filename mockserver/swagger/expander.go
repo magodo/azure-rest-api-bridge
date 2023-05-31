@@ -3,18 +3,17 @@ package swagger
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
-	"github.com/go-openapi/jsonreference"
-	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
 	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger/refutil"
 )
 
 type Expander struct {
-	specpath string
-	swagger  spec.Swagger
-	root     *Property
+	// Operation ref
+	ref  spec.Ref
+	root *Property
 }
 
 type PropertyName struct {
@@ -46,11 +45,10 @@ type Property struct {
 	// The resolved refs (normalized) along the way to this property, which is used to avoid cyclic reference.
 	visitedRefs map[string]bool
 
-	// The ref (normalized) that owns the schema of this property, if any.
+	// The ref (normalized) that points to the concrete schema of this property.
 	// E.g. prop1's schema is "schema1", which refs "schema2", which refs "schema3".
-	// So prop1's ownRef is (normalized) "schema3"
-	// E.g. prop1's schema is inlined, then the ownRef is nil
-	ownRef *spec.Ref
+	// Then prop1's ref is (normalized) "schema3"
+	ref spec.Ref
 
 	// Children represents the child properties of an object
 	// At most one of Children, Element and Variant is non nil
@@ -66,47 +64,44 @@ type Property struct {
 }
 
 // NewExpander create a expander for the successful response schema of an operation referenced by the input json reference.
-func NewExpander(specpath string, ref *jsonreference.Ref) (*Expander, error) {
-	doc, err := loads.Spec(specpath)
-	if err != nil {
-		return nil, fmt.Errorf("loading %s: %v", specpath, err)
+// The reference must be a normalized reference to the get operation.
+func NewExpander(ref spec.Ref) (*Expander, error) {
+	if !ref.HasFullFilePath {
+		return nil, fmt.Errorf("reference %s is not normalized", &ref)
 	}
-	swg := doc.Spec()
-	ptr := ref.GetPointer()
-	opRaw, _, err := ptr.Get(swg)
-	if err != nil {
-		return nil, fmt.Errorf("referencing json pointer %s: %v", ptr, err)
-	}
-	op, ok := opRaw.(*spec.Operation)
-	if !ok {
-		return nil, fmt.Errorf("the json pointer %s points to a non-operation object %T", ptr, opRaw)
+	tks := ref.GetPointer().DecodedTokens()
+	if l := len(tks); l == 0 || tks[l-1] != "get" {
+		return nil, fmt.Errorf("reference %s is not pointing to `get` operation", &ref)
 	}
 
-	// Retrieve the 200 response schema
+	piref := refutil.Parent(ref)
+	pi, err := spec.ResolvePathItemWithBase(nil, piref, nil)
+	if err != nil {
+		return nil, fmt.Errorf("resolving path item ref %s: %v", &piref, err)
+	}
+	op := pi.Get
+	if op == nil {
+		return nil, fmt.Errorf("no `get` operation defined by path item %s", &piref)
+	}
 	if op.Responses == nil {
-		return nil, fmt.Errorf("operation refed by %s has no responses defined", ptr)
+		return nil, fmt.Errorf("operation refed by %s has no responses defined", &ref)
 	}
 	// We only care about 200 for now, probably we should extend to support the others (e.g. when 200 is not defined).
-	resp, ok := op.Responses.StatusCodeResponses[http.StatusOK]
-	if !ok {
-		return nil, fmt.Errorf("operation refed by %s has no 200 responses object defined", ptr)
+	if _, ok := op.Responses.StatusCodeResponses[http.StatusOK]; !ok {
+		return nil, fmt.Errorf("operation refed by %s has no 200 responses object defined", &ref)
 	}
 
 	// In case the response is a ref itself, follow it
-	presp, respRef, visited, ok, err := refutil.RResolveResponse(specpath, resp, nil)
+	respref := refutil.Append(ref, "responses", "200")
+	_, respref, visited, ok, err := refutil.RResolveResponse(respref, nil, false)
 	if err != nil {
-		return nil, fmt.Errorf("recursively resolve response ref %s: %v", resp.Ref.String(), err)
+		return nil, fmt.Errorf("recursively resolve response ref %s: %v", &respref, err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("circular ref found when resolving response ref %s", resp.Ref.String())
+		return nil, fmt.Errorf("circular ref found when resolving response ref %s", &respref)
 	}
 
-	sspecpath := specpath
-	if respRef != nil {
-		sspecpath = respRef.GetURL().Path
-	}
-
-	psch, ownRef, visited, ok, err := refutil.RResolve(sspecpath, *presp.Schema, visited)
+	psch, ownRef, visited, ok, err := refutil.RResolve(refutil.Append(respref, "schema"), nil, false)
 	if err != nil {
 		return nil, fmt.Errorf("recursively resolve response schema: %v", err)
 	}
@@ -115,11 +110,10 @@ func NewExpander(specpath string, ref *jsonreference.Ref) (*Expander, error) {
 	}
 
 	return &Expander{
-		specpath: specpath,
-		swagger:  *swg,
+		ref: ref,
 		root: &Property{
 			Schema:      psch,
-			ownRef:      ownRef,
+			ref:         ownRef,
 			addr:        RootAddr,
 			visitedRefs: visited,
 		},
@@ -187,7 +181,7 @@ func (e *Expander) expandPropStepAsArray(prop *Property) error {
 	if schema.Items.Schema == nil {
 		return fmt.Errorf("%s: items of property is not a single schema (not supported yet)", addr)
 	}
-	schema, ownRef, visited, ok, err := refutil.RResolve(e.specpath, *schema.Items.Schema, prop.visitedRefs)
+	schema, ownRef, visited, ok, err := refutil.RResolve(refutil.Append(prop.ref, "items"), prop.visitedRefs, false)
 	if err != nil {
 		return fmt.Errorf("%s: recursively resolving items: %v", addr, err)
 	}
@@ -196,7 +190,7 @@ func (e *Expander) expandPropStepAsArray(prop *Property) error {
 	}
 	prop.Element = &Property{
 		Schema:      schema,
-		ownRef:      ownRef,
+		ref:         ownRef,
 		addr:        addr,
 		visitedRefs: visited,
 	}
@@ -215,7 +209,7 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 	if schema.AdditionalProperties.Schema == nil {
 		return fmt.Errorf("%s: additionalProperties is not a single schema (not supported yet)", addr)
 	}
-	schema, ownRef, visited, ok, err := refutil.RResolve(e.specpath, *schema.AdditionalProperties.Schema, prop.visitedRefs)
+	schema, ownRef, visited, ok, err := refutil.RResolve(refutil.Append(prop.ref, "additionalProperties"), prop.visitedRefs, false)
 	if err != nil {
 		return fmt.Errorf("%s: recursively resolving additionalProperties: %v", addr, err)
 	}
@@ -224,7 +218,7 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 	}
 	prop.Element = &Property{
 		Schema:      schema,
-		ownRef:      ownRef,
+		ref:         ownRef,
 		addr:        addr,
 		visitedRefs: visited,
 	}
@@ -241,13 +235,13 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 	prop.Children = map[string]*Property{}
 
 	// Expanding the regular properties
-	for k, sch := range schema.Properties {
+	for k := range schema.Properties {
 		addr := append(PropertyAddr{}, prop.addr...)
 		addr = append(addr, PropertyAddrStep{
 			Type:  PropertyAddrStepTypeProp,
 			Value: k,
 		})
-		schema, ownRef, visited, ok, err := refutil.RResolve(e.specpath, sch, prop.visitedRefs)
+		schema, ownRef, visited, ok, err := refutil.RResolve(refutil.Append(prop.ref, "properties", k), prop.visitedRefs, false)
 		if err != nil {
 			return fmt.Errorf("%s: recursively resolving property %s: %v", addr, k, err)
 		}
@@ -256,15 +250,15 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 		}
 		prop.Children[k] = &Property{
 			Schema:      schema,
-			ownRef:      ownRef,
+			ref:         ownRef,
 			addr:        addr,
 			visitedRefs: visited,
 		}
 	}
 
 	// Inheriting the allOf schemas
-	for i, sch := range schema.AllOf {
-		schema, ownRef, visited, ok, err := refutil.RResolve(e.specpath, sch, prop.visitedRefs)
+	for i := range schema.AllOf {
+		schema, ownRef, visited, ok, err := refutil.RResolve(refutil.Append(prop.ref, "allOf", strconv.Itoa(i)), prop.visitedRefs, false)
 		if err != nil {
 			return fmt.Errorf("%s: recursively resolving %d-th allOf schema: %v", prop.addr, i, err)
 		}
@@ -272,11 +266,10 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 			continue
 		}
 		tmpExp := Expander{
-			specpath: e.specpath,
-			swagger:  e.swagger,
+			ref: ownRef,
 			root: &Property{
 				Schema:      schema,
-				ownRef:      ownRef,
+				ref:         ownRef,
 				addr:        prop.addr,
 				visitedRefs: visited,
 			},
@@ -295,13 +288,12 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 
 func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 	schema := prop.Schema
-
 	if !schemaIsObject(schema) {
 		return fmt.Errorf("%s: is not object", prop.addr)
 	}
-
 	prop.Variant = map[string]*Property{}
-	dsch, _, _, _, err := refutil.RResolve(e.specpath, schema.Properties[schema.Discriminator], prop.visitedRefs)
+
+	dsch, _, _, _, err := refutil.RResolve(refutil.Append(prop.ref, "properties", schema.Discriminator), prop.visitedRefs, false)
 	if err != nil {
 		return fmt.Errorf("%s: recursively resolving discriminator property's(%s) schema: %v", prop.addr, schema.Discriminator, err)
 	}
@@ -312,39 +304,25 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 			Type:  PropertyAddrStepTypeVariant,
 			Value: name,
 		})
-		sch, ok := e.swagger.Definitions[name]
-		if !ok {
-			return fmt.Errorf("%s: no variant schema named %s found", addr, name)
-		}
-
-		// Though we are not explicitly following any reference of the variant, while we are effectively doing so. Hence construct the reference to the variant schema and mark it as visited.
-		// Meanwhile, we'll remove the owning ref of the base schema from visited set in order to allow the later allOf inheritance.
-		vref, err := refutil.NormalizeFileRef(spec.MustCreateRef("#/definitions/"+name), e.specpath)
-		if err != nil {
-			return err
-		}
 		visited := map[string]bool{}
 		for k, v := range prop.visitedRefs {
-			if k == prop.ownRef.String() {
+			// Remove the owning ref of the base schema from visited set in order to allow the later allOf inheritance.
+			if k == prop.ref.String() {
 				continue
 			}
 			visited[k] = v
 		}
-		visited[vref.String()] = true
-
-		psch, ownRef, visited, ok, err := refutil.RResolve(e.specpath, sch, visited)
+		vref := spec.MustCreateRef(prop.ref.GetURL().Path + "#/definitions/" + name)
+		psch, ownRef, visited, ok, err := refutil.RResolve(vref, visited, true)
 		if err != nil {
 			return fmt.Errorf("%s: recursively resolving variant schema (%s): %v", addr, name, err)
 		}
 		if !ok {
 			continue
 		}
-		if ownRef == nil {
-			ownRef = &vref
-		}
 		prop.Variant[name] = &Property{
 			Schema:      psch,
-			ownRef:      ownRef,
+			ref:         ownRef,
 			addr:        addr,
 			visitedRefs: visited,
 		}
