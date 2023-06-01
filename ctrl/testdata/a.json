@@ -16,6 +16,14 @@
                     "type": "boolean"
                 },
                 "object": {
+                    "type": "object",
+                    "properties": {
+                        "string": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "emptyObject": {
                     "type": "object"
                 },
                 "array": {
@@ -29,6 +37,31 @@
                     "additionalProperties": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "base": {
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["var1", "var2"]
+                }
+            }
+        },
+        "var1": {
+            "allOf": [{"$ref": "#/definitions/base"}],
+            "properties": {
+                "prop1": {
+                    "type": "string"
+                }
+            }
+        },
+        "var2": {
+            "allOf": [{"$ref": "#/definitions/base"}],
+            "properties": {
+                "prop2": {
+                    "type": "string"
                 }
             }
         }

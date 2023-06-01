@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"sort"
 	"testing"
 
 	"github.com/go-openapi/spec"
@@ -127,18 +126,6 @@ func TestCatesianProductMap(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			result := CatesianProductMap(tt.params)
-			sort.Slice(result, func(i, j int) bool {
-				ei, ej := result[i], result[j]
-				sumi := 0
-				for _, v := range ei {
-					sumi += v.(int)
-				}
-				sumj := 0
-				for _, v := range ej {
-					sumj += v.(int)
-				}
-				return sumi < sumj
-			})
 			require.Equal(t, tt.expect, result)
 		})
 	}
@@ -162,15 +149,46 @@ func TestSynthesize(t *testing.T) {
     "test string"
   ],
   "boolean": true,
+  "emptyObject": {
+  	"empty": "empty"
+  },
   "integer": 0,
   "map": {
     "key": "test string"
   },
   "number": 1.2,
   "object": {
-  	"empty": "empty"
+  	"string": "test string"
   },
   "string": "test string"
+}
+				`,
+			},
+		},
+		{
+			ref: specpathA + "#/definitions/base",
+			expect: []string{
+				`
+{
+	"type": "var1",
+	"prop1": "test string"
+}
+				`,
+				`
+{
+	"type": "var2",
+	"prop2": "test string"
+}
+				`,
+			},
+		},
+		{
+			ref: specpathA + "#/definitions/var1",
+			expect: []string{
+				`
+{
+	"type": "var1",
+	"prop1": "test string"
 }
 				`,
 			},

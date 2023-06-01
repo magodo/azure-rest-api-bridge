@@ -23,7 +23,7 @@ func TestExpand(t *testing.T) {
 	}{
 		{
 			name: specpathA,
-			ref:  specpathA + "#/paths/~1p1/get",
+			ref:  specpathA + "#/definitions/Pet",
 			verify: func(t *testing.T, root *Property, swg *spec.Swagger) {
 				expect := &Property{
 					Schema: ptr(swg.Definitions["Pet"]),
@@ -34,8 +34,9 @@ func TestExpand(t *testing.T) {
 					ref: spec.MustCreateRef(specpathA + "#/definitions/Pet"),
 					Variant: map[string]*Property{
 						"Dog": {
-							Schema: ptr(swg.Definitions["Dog"]),
-							addr:   ParseAddr("{Dog}"),
+							Schema:        ptr(swg.Definitions["Dog"]),
+							Discriminator: "type",
+							addr:          ParseAddr("{Dog}"),
 							visitedRefs: map[string]bool{
 								specpathA + "#/definitions/Dog": true,
 							},
@@ -67,8 +68,9 @@ func TestExpand(t *testing.T) {
 									},
 									ref: spec.MustCreateRef(specpathA + "#/definitions/Dog/properties/cat_friends"),
 									Element: &Property{
-										Schema: ptr(swg.Definitions["Cat"]),
-										addr:   ParseAddr("{Dog}.cat_friends.*"),
+										Schema:        ptr(swg.Definitions["Cat"]),
+										Discriminator: "type",
+										addr:          ParseAddr("{Dog}.cat_friends.*"),
 										visitedRefs: map[string]bool{
 											specpathA + "#/definitions/Cat": true,
 											specpathA + "#/definitions/Dog": true,
@@ -110,8 +112,9 @@ func TestExpand(t *testing.T) {
 							},
 						},
 						"Cat": {
-							Schema: ptr(swg.Definitions["Cat"]),
-							addr:   ParseAddr("{Cat}"),
+							Schema:        ptr(swg.Definitions["Cat"]),
+							Discriminator: "type",
+							addr:          ParseAddr("{Cat}"),
 							visitedRefs: map[string]bool{
 								specpathA + "#/definitions/Cat": true,
 							},
@@ -143,8 +146,9 @@ func TestExpand(t *testing.T) {
 									},
 									ref: spec.MustCreateRef(specpathA + "#/definitions/Cat/properties/dog_friends"),
 									Element: &Property{
-										Schema: ptr(swg.Definitions["Dog"]),
-										addr:   ParseAddr("{Cat}.dog_friends.*"),
+										Schema:        ptr(swg.Definitions["Dog"]),
+										Discriminator: "type",
+										addr:          ParseAddr("{Cat}.dog_friends.*"),
 										visitedRefs: map[string]bool{
 											specpathA + "#/definitions/Cat": true,
 											specpathA + "#/definitions/Dog": true,
@@ -190,12 +194,97 @@ func TestExpand(t *testing.T) {
 				require.Equal(t, expect, root)
 			},
 		},
+		{
+			name: specpathA,
+			ref:  specpathA + "#/definitions/Dog",
+			verify: func(t *testing.T, root *Property, swg *spec.Swagger) {
+				expect := &Property{
+					Schema:        ptr(swg.Definitions["Dog"]),
+					Discriminator: "type",
+					addr:          RootAddr,
+					visitedRefs: map[string]bool{
+						specpathA + "#/definitions/Dog": true,
+					},
+					ref: spec.MustCreateRef(specpathA + "#/definitions/Dog"),
+					Children: map[string]*Property{
+						"type": {
+							Schema: ptr(swg.Definitions["Pet"].Properties["type"]),
+							addr:   ParseAddr("type"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/Dog": true,
+								specpathA + "#/definitions/Pet": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/Pet/properties/type"),
+						},
+						"nickname": {
+							Schema: ptr(swg.Definitions["Pet"].Properties["nickname"]),
+							addr:   ParseAddr("nickname"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/Dog": true,
+								specpathA + "#/definitions/Pet": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/Pet/properties/nickname"),
+						},
+						"cat_friends": {
+							Schema: ptr(swg.Definitions["Dog"].Properties["cat_friends"]),
+							addr:   ParseAddr("cat_friends"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/Dog": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/Dog/properties/cat_friends"),
+							Element: &Property{
+								Schema:        ptr(swg.Definitions["Cat"]),
+								Discriminator: "type",
+								addr:          ParseAddr("cat_friends.*"),
+								visitedRefs: map[string]bool{
+									specpathA + "#/definitions/Cat": true,
+									specpathA + "#/definitions/Dog": true,
+								},
+								ref: spec.MustCreateRef(specpathA + "#/definitions/Cat"),
+								Children: map[string]*Property{
+									"type": {
+										Schema: ptr(swg.Definitions["Pet"].Properties["type"]),
+										addr:   ParseAddr("cat_friends.*.type"),
+										visitedRefs: map[string]bool{
+											specpathA + "#/definitions/Cat": true,
+											specpathA + "#/definitions/Dog": true,
+											specpathA + "#/definitions/Pet": true,
+										},
+										ref: spec.MustCreateRef(specpathA + "#/definitions/Pet/properties/type"),
+									},
+									"nickname": {
+										Schema: ptr(swg.Definitions["Pet"].Properties["nickname"]),
+										addr:   ParseAddr("cat_friends.*.nickname"),
+										visitedRefs: map[string]bool{
+											specpathA + "#/definitions/Cat": true,
+											specpathA + "#/definitions/Dog": true,
+											specpathA + "#/definitions/Pet": true,
+										},
+										ref: spec.MustCreateRef(specpathA + "#/definitions/Pet/properties/nickname"),
+									},
+									"dog_friends": {
+										Schema: ptr(swg.Definitions["Cat"].Properties["dog_friends"]),
+										addr:   ParseAddr("cat_friends.*.dog_friends"),
+										visitedRefs: map[string]bool{
+											specpathA + "#/definitions/Dog": true,
+											specpathA + "#/definitions/Cat": true,
+										},
+										ref: spec.MustCreateRef(specpathA + "#/definitions/Cat/properties/dog_friends"),
+									},
+								},
+							},
+						},
+					},
+				}
+				require.Equal(t, expect, root)
+			},
+		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			ref := spec.MustCreateRef(tt.ref)
-			exp, err := NewExpanderFromGet(ref)
+			exp, err := NewExpander(ref)
 			require.NoError(t, err)
 			require.NoError(t, exp.Expand())
 			doc, err := loads.Spec(ref.GetURL().Path)

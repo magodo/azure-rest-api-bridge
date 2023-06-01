@@ -2,6 +2,7 @@ package ctrl
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 )
@@ -50,22 +51,26 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 				}
 			}
 		case p.Variant != nil:
-			for _, pp := range p.Variant {
-				result = append(result, synProp(p, pp)...)
+			keys := make([]string, 0, len(p.Variant))
+			for k := range p.Variant {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				result = append(result, synProp(p, p.Variant[k])...)
 			}
 		default:
-			// discriminator
-			if parent != nil {
-				if v := parent.VariantName(); v != "" {
-					return []interface{}{v}
-				}
-			}
 			if len(p.Schema.Type) != 1 {
 				panic(fmt.Sprintf("%s: schema type as array is not supported", *p))
 			}
 			switch t := p.Schema.Type[0]; t {
 			case "string":
-				result = []interface{}{"test string"}
+				// discriminator property
+				if parent != nil && parent.Discriminator != "" && parent.Discriminator == p.Name() {
+					result = []interface{}{parent.SchemaName()}
+				} else {
+					result = []interface{}{"test string"}
+				}
 			case "integer":
 				result = []interface{}{0}
 			case "number":
@@ -114,7 +119,13 @@ func CatesianProductMap(params map[string][]interface{}) []map[string]interface{
 		return nil
 	}
 	result := []map[string]interface{}{}
-	for k, param := range params {
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		param := params[k]
 		if len(param) != 0 {
 			newresult := []map[string]interface{}{}
 			for _, v := range param {

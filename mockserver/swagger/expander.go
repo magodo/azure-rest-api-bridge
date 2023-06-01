@@ -18,7 +18,7 @@ type Expander struct {
 // NewExpander create a expander for the schema referenced by the input json reference.
 // The reference must be a normalized reference.
 func NewExpander(ref spec.Ref) (*Expander, error) {
-	psch, ownRef, visited, ok, err := refutil.RResolve(ref, nil, false)
+	psch, ownRef, visited, ok, err := refutil.RResolve(ref, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("recursively resolve schema: %v", err)
 	}
@@ -226,6 +226,10 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 		}
 		if !ok {
 			continue
+		}
+		// If any of the allOfs is a discriminator, we'll need to mark the current property's discriminator
+		if schema.Discriminator != "" {
+			prop.Discriminator = schema.Discriminator
 		}
 		tmpExp := Expander{
 			ref: ownRef,

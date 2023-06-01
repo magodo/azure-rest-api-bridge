@@ -77,6 +77,10 @@ type Property struct {
 	// Then prop1's ref is (normalized) "schema3"
 	ref spec.Ref
 
+	// Discriminator indicates the property name of the parent base schema's discriminator.
+	// This only applies to property that is a variant schema.
+	Discriminator string
+
 	// Children represents the child properties of an object
 	// At most one of Children, Element and Variant is non nil
 	Children map[string]*Property
@@ -110,12 +114,20 @@ func (prop *Property) Walk(fn PropWalkFunc) {
 	}
 }
 
-func (prop Property) VariantName() string {
+func (prop Property) SchemaName() string {
+	tks := prop.ref.GetPointer().DecodedTokens()
+	if len(tks) != 2 || tks[0] != "definitions" {
+		return ""
+	}
+	return tks[1]
+}
+
+func (prop Property) Name() string {
 	if len(prop.addr) == 0 {
 		return ""
 	}
 	lastStep := prop.addr[len(prop.addr)-1]
-	if lastStep.Type != PropertyAddrStepTypeVariant {
+	if lastStep.Type != PropertyAddrStepTypeProp {
 		return ""
 	}
 	return lastStep.Value
