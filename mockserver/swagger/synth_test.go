@@ -1,4 +1,4 @@
-package ctrl
+package swagger
 
 import (
 	"encoding/json"
@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/go-openapi/spec"
-	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 	"github.com/stretchr/testify/require"
 )
 
@@ -134,14 +133,14 @@ func TestCatesianProductMap(t *testing.T) {
 func TestSynthesize(t *testing.T) {
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
-	specpathA := filepath.Join(pwd, "testdata", "a.json")
+	specpathSyn := filepath.Join(pwd, "testdata", "syn.json")
 
 	cases := []struct {
 		ref    string
 		expect []string
 	}{
 		{
-			ref: specpathA + "#/definitions/object",
+			ref: specpathSyn + "#/definitions/object",
 			expect: []string{
 				`
 {
@@ -166,7 +165,7 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathA + "#/definitions/base",
+			ref: specpathSyn + "#/definitions/base",
 			expect: []string{
 				`
 {
@@ -183,7 +182,7 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathA + "#/definitions/var1",
+			ref: specpathSyn + "#/definitions/var1",
 			expect: []string{
 				`
 {
@@ -198,7 +197,7 @@ func TestSynthesize(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.ref, func(t *testing.T) {
 			ref := spec.MustCreateRef(tt.ref)
-			exp, err := swagger.NewExpander(ref)
+			exp, err := NewExpander(ref)
 			require.NoError(t, err)
 			require.NoError(t, exp.Expand())
 			syn := NewSynthesizer(exp.Root())

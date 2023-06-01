@@ -1,18 +1,16 @@
-package ctrl
+package swagger
 
 import (
 	"fmt"
 	"sort"
-
-	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 )
 
 type Synthesizer struct {
-	root *swagger.Property
+	root *Property
 	m    map[string]interface{}
 }
 
-func NewSynthesizer(root *swagger.Property) Synthesizer {
+func NewSynthesizer(root *Property) Synthesizer {
 	return Synthesizer{
 		root: root,
 		m:    map[string]interface{}{},
@@ -20,15 +18,15 @@ func NewSynthesizer(root *swagger.Property) Synthesizer {
 }
 
 func (syn *Synthesizer) Synthesize() []interface{} {
-	var synProp func(parent, p *swagger.Property) []interface{}
-	synProp = func(parent, p *swagger.Property) []interface{} {
+	var synProp func(parent, p *Property) []interface{}
+	synProp = func(parent, p *Property) []interface{} {
 		var result []interface{}
 		switch {
 		case p.Element != nil:
 			inners := synProp(p, p.Element)
 			for _, inner := range inners {
 				var res interface{}
-				if swagger.SchemaIsArray(p.Schema) {
+				if SchemaIsArray(p.Schema) {
 					res = []interface{}{inner}
 				} else {
 					// map
