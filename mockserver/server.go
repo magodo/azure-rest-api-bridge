@@ -87,7 +87,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	operation := opRaw.(*spec.Operation)
 	_ = operation
 
-	w.Write([]byte(`{"location": "westeurope", "tags": {"foo": "bar"}}`))
+	w.Write([]byte(`{"name": "example-rg", "location": "example-location", "tags": {"foo": "bar"}}`))
 }
 
 func (srv *Server) Start() error {
