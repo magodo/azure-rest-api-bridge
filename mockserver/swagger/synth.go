@@ -7,13 +7,13 @@ import (
 
 type Synthesizer struct {
 	root *Property
-	m    map[string]interface{}
+	rnd  Rnd
 }
 
-func NewSynthesizer(root *Property) Synthesizer {
+func NewSynthesizer(root *Property, rnd Rnd) Synthesizer {
 	return Synthesizer{
 		root: root,
-		m:    map[string]interface{}{},
+		rnd:  rnd,
 	}
 }
 
@@ -30,7 +30,7 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 					res = []interface{}{inner}
 				} else {
 					// map
-					res = map[string]interface{}{"key": inner}
+					res = map[string]interface{}{"KEY": inner}
 				}
 				result = append(result, res)
 			}
@@ -39,10 +39,15 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 
 			// empty object
 			if len(p.Children) == 0 {
-				result = append(result, map[string]interface{}{"empty": "empty"})
+				result = append(result, map[string]interface{}{"OBJKEY": "OBJVAL"})
 			} else {
-				for k, v := range p.Children {
-					m[k] = synProp(p, v)
+				keys := make([]string, 0, len(p.Children))
+				for k := range p.Children {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+				for _, k := range keys {
+					m[k] = synProp(p, p.Children[k])
 				}
 				for _, v := range CatesianProductMap(m) {
 					result = append(result, v)
@@ -63,16 +68,17 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 			}
 			switch t := p.Schema.Type[0]; t {
 			case "string":
-				// discriminator property
 				if parent != nil && parent.Discriminator != "" && parent.Discriminator == p.Name() {
+					// discriminator property
 					result = []interface{}{parent.SchemaName()}
 				} else {
-					result = []interface{}{"test string"}
+					// regular string
+					result = []interface{}{syn.rnd.NextString(p.Schema.Format)}
 				}
 			case "integer":
-				result = []interface{}{0}
+				result = []interface{}{syn.rnd.NextInteger(p.Schema.Format)}
 			case "number":
-				result = []interface{}{1.2}
+				result = []interface{}{syn.rnd.NextNumber(p.Schema.Format)}
 			case "boolean":
 				result = []interface{}{true}
 			default:

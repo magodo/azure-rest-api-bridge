@@ -1,7 +1,6 @@
 package swagger
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -11,171 +10,253 @@ import (
 func TestRnd(t *testing.T) {
 	initRnd := NewRnd(nil)
 	cases := []struct {
-		name   string
+		typ    string
+		format string
+		again  bool
 		expect interface{}
 	}{
 		{
-			name:   "RawString",
-			expect: "a",
-		},
-		{
-			name:   "NextRawString",
+			typ:    "string",
+			format: "",
 			expect: "b",
 		},
 		{
-			name:   "RawInteger",
-			expect: int64(0),
+			typ:    "string",
+			format: "",
+			again:  true,
+			expect: "c",
 		},
 		{
-			name:   "NextRawInteger",
+			typ:    "integer",
+			format: "",
 			expect: int64(1),
 		},
 		{
-			name:   "RawNumber",
-			expect: 0.5,
+			typ:    "integer",
+			format: "",
+			again:  true,
+			expect: int64(2),
 		},
 		{
-			name:   "NextRawNumber",
+			typ:    "number",
+			format: "",
 			expect: 1.5,
 		},
 		{
-			name:   "Date",
-			expect: initRnd.time.Format("2006-01-02"),
+			typ:    "number",
+			format: "",
+			again:  true,
+			expect: 2.5,
 		},
 		{
-			name:   "NextDate",
+			typ:    "string",
+			format: "date",
 			expect: initRnd.time.Add(24 * time.Hour).Format("2006-01-02"),
 		},
 		{
-			name:   "DateTime",
-			expect: initRnd.time.Format(time.RFC3339),
+			typ:    "string",
+			format: "date",
+			again:  true,
+			expect: initRnd.time.Add(48 * time.Hour).Format("2006-01-02"),
 		},
 		{
-			name:   "NextDateTime",
-			expect: initRnd.time.Add(time.Minute).Format(time.RFC3339),
+			typ:    "string",
+			format: "date-time",
+			expect: initRnd.time.Add(time.Hour).Format(time.RFC3339),
 		},
 		{
-			name:   "DateTimeRFC1123",
-			expect: initRnd.time.Format(time.RFC1123),
+			typ:    "string",
+			format: "date-time",
+			again:  true,
+			expect: initRnd.time.Add(time.Duration(2) * time.Hour).Format(time.RFC3339),
 		},
 		{
-			name:   "NextDateTimeRFC1123",
-			expect: initRnd.time.Add(time.Minute).Format(time.RFC1123),
+			typ:    "string",
+			format: "date-time-rfc1123",
+			expect: initRnd.time.Add(time.Hour).Format(time.RFC1123),
 		},
 		{
-			name:   "Decimal",
-			expect: 0.5,
+			typ:    "string",
+			format: "date-time-rfc1123",
+			again:  true,
+			expect: initRnd.time.Add(time.Duration(2) * time.Hour).Format(time.RFC1123),
 		},
 		{
-			name:   "NextDecimal",
+			typ:    "number",
+			format: "decimal",
 			expect: 1.5,
 		},
 		{
-			name:   "Double",
-			expect: 0.5,
+			typ:    "number",
+			format: "decimal",
+			again:  true,
+			expect: 2.5,
 		},
 		{
-			name:   "NextDouble",
+			typ:    "number",
+			format: "double",
 			expect: 1.5,
 		},
 		{
-			name:   "Duration",
-			expect: "P0D",
+			typ:    "number",
+			format: "double",
+			again:  true,
+			expect: 2.5,
 		},
 		{
-			name:   "NextDuration",
-			expect: "PT1S",
+			typ:    "string",
+			format: "duration",
+			expect: "PT1H",
 		},
 		{
-			name:   "Email",
-			expect: "a@foo.com",
+			typ:    "string",
+			format: "duration",
+			again:  true,
+			expect: "PT2H",
 		},
 		{
-			name:   "NextEmail",
+			typ:    "string",
+			format: "email",
 			expect: "b@foo.com",
 		},
 		{
-			name:   "File",
-			expect: "a",
+			typ:    "string",
+			format: "email",
+			again:  true,
+			expect: "c@foo.com",
 		},
 		{
-			name:   "NextFile",
+			typ:    "string",
+			format: "file",
 			expect: "b",
 		},
 		{
-			name:   "Float",
-			expect: float32(0.5),
+			typ:    "string",
+			format: "file",
+			again:  true,
+			expect: "c",
 		},
 		{
-			name:   "NextFloat",
-			expect: float32(1.5),
+			typ:    "number",
+			format: "float",
+			expect: 1.5,
 		},
 		{
-			name:   "Int32",
-			expect: int32(0),
+			typ:    "number",
+			format: "float",
+			again:  true,
+			expect: 2.5,
 		},
 		{
-			name:   "NextInt32",
-			expect: int32(1),
-		},
-		{
-			name:   "Int64",
-			expect: int64(0),
-		},
-		{
-			name:   "NextInt64",
+			typ:    "integer",
+			format: "int32",
 			expect: int64(1),
 		},
 		{
-			name:   "Password",
-			expect: "a",
+			typ:    "integer",
+			format: "int32",
+			again:  true,
+			expect: int64(2),
 		},
 		{
-			name:   "NextPassword",
+			typ:    "integer",
+			format: "int64",
+			expect: int64(1),
+		},
+		{
+			typ:    "integer",
+			format: "int64",
+			again:  true,
+			expect: int64(2),
+		},
+		{
+			typ:    "string",
+			format: "password",
 			expect: "b",
 		},
 		{
-			name:   "Time",
-			expect: initRnd.time.Format("15:04:05"),
+			typ:    "string",
+			format: "password",
+			again:  true,
+			expect: "c",
 		},
 		{
-			name:   "NextTime",
-			expect: initRnd.time.Add(time.Minute).Format("15:04:05"),
+			typ:    "string",
+			format: "time",
+			expect: initRnd.time.Add(time.Hour).Format("15:04:05"),
 		},
 		{
-			name:   "Unixtime",
-			expect: int64(0),
+			typ:    "string",
+			format: "time",
+			again:  true,
+			expect: initRnd.time.Add(time.Duration(2) * time.Hour).Format("15:04:05"),
 		},
 		{
-			name:   "NextUnixtime",
+			typ:    "integer",
+			format: "unixtime",
 			expect: int64(1),
 		},
 		{
-			name:   "URI",
-			expect: "https://a.com",
+			typ:    "integer",
+			format: "unixtime",
+			again:  true,
+			expect: int64(2),
 		},
 		{
-			name:   "NextURI",
+			typ:    "string",
+			format: "uri",
 			expect: "https://b.com",
 		},
 		{
-			name:   "URL",
-			expect: "https://a.com",
+			typ:    "string",
+			format: "uri",
+			again:  true,
+			expect: "https://c.com",
 		},
 		{
-			name:   "NextURL",
+			typ:    "string",
+			format: "url",
 			expect: "https://b.com",
+		},
+		{
+			typ:    "string",
+			format: "url",
+			again:  true,
+			expect: "https://c.com",
 		},
 	}
 
 	for _, tt := range cases {
-		t.Run(tt.name, func(t *testing.T) {
+		name := tt.typ
+		if tt.format != "" {
+			name += "(" + tt.format + ")"
+		}
+		if tt.again {
+			name = "next " + name
+		}
+		t.Run(name, func(t *testing.T) {
 			rnd := initRnd
-			v := reflect.ValueOf(&rnd)
-			mv := v.MethodByName(tt.name)
-			rets := mv.Call(nil)
-			require.Len(t, rets, 1)
-			require.Equal(t, tt.expect, rets[0].Interface())
+			var v interface{}
+			switch tt.typ {
+			case "string":
+				v = rnd.NextString(tt.format)
+				if tt.again {
+					v = rnd.NextString(tt.format)
+				}
+			case "integer":
+				v = rnd.NextInteger(tt.format)
+				if tt.again {
+					v = rnd.NextInteger(tt.format)
+				}
+			case "number":
+				v = rnd.NextNumber(tt.format)
+				if tt.again {
+					v = rnd.NextNumber(tt.format)
+				}
+			default:
+				t.Fatalf("unknown type: %s", tt.typ)
+			}
+			require.Equal(t, tt.expect, v)
 		})
 	}
 }
@@ -183,7 +264,7 @@ func TestRnd(t *testing.T) {
 func TestRnd_NextRawStringCarray(t *testing.T) {
 	rnd := NewRnd(nil)
 	for i := 0; i != 26; i++ {
-		rnd.NextRawString()
+		rnd.updateRawString()
 	}
-	require.Equal(t, "aa", rnd.RawString())
+	require.Equal(t, "aa", rnd.rawString)
 }

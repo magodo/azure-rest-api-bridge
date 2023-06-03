@@ -145,21 +145,21 @@ func TestSynthesize(t *testing.T) {
 				`
 {
   "array": [
-    "test string"
+    "b"
   ],
   "boolean": true,
   "emptyObject": {
-  	"empty": "empty"
+  	"OBJKEY": "OBJVAL"
   },
-  "integer": 0,
+  "integer": 1,
   "map": {
-    "key": "test string"
+    "KEY": "c"
   },
-  "number": 1.2,
+  "number": 1.5,
   "object": {
-  	"string": "test string"
+  	"string": "d"
   },
-  "string": "test string"
+  "string": "e"
 }
 				`,
 			},
@@ -170,13 +170,13 @@ func TestSynthesize(t *testing.T) {
 				`
 {
 	"type": "var1",
-	"prop1": "test string"
+	"prop1": "b"
 }
 				`,
 				`
 {
 	"type": "var2",
-	"prop2": "test string"
+	"prop2": "c"
 }
 				`,
 			},
@@ -187,7 +187,7 @@ func TestSynthesize(t *testing.T) {
 				`
 {
 	"type": "var1",
-	"prop1": "test string"
+	"prop1": "b"
 }
 				`,
 			},
@@ -200,7 +200,7 @@ func TestSynthesize(t *testing.T) {
 			exp, err := NewExpander(ref)
 			require.NoError(t, err)
 			require.NoError(t, exp.Expand())
-			syn := NewSynthesizer(exp.Root())
+			syn := NewSynthesizer(exp.Root(), NewRnd(nil))
 			results := syn.Synthesize()
 			require.Len(t, results, len(tt.expect))
 			for i, res := range results {
