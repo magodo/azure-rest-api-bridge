@@ -7,6 +7,7 @@ func SetLogger(l Logger) {
 }
 
 type Logger interface {
+	Trace(msg string, args ...interface{})
 	Debug(msg string, args ...interface{})
 	Info(msg string, args ...interface{})
 	Warn(msg string, args ...interface{})
@@ -14,6 +15,10 @@ type Logger interface {
 }
 
 type NullLogger struct{}
+
+func (n *NullLogger) Trace(msg string, args ...interface{}) {
+	return
+}
 
 func (n *NullLogger) Debug(msg string, args ...interface{}) {
 	return
@@ -29,6 +34,10 @@ func (n *NullLogger) Warn(msg string, args ...interface{}) {
 
 func (n *NullLogger) Error(msg string, args ...interface{}) {
 	return
+}
+
+func Trace(msg string, args ...interface{}) {
+	logger.Trace(msg, args...)
 }
 
 func Debug(msg string, args ...interface{}) {

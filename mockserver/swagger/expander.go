@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-openapi/spec"
+	"github.com/magodo/azure-rest-api-bridge/log"
 	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger/refutil"
 )
 
@@ -20,7 +21,7 @@ type Expander struct {
 func NewExpander(ref spec.Ref) (*Expander, error) {
 	psch, ownRef, visited, ok, err := refutil.RResolve(ref, nil, true)
 	if err != nil {
-		return nil, fmt.Errorf("recursively resolve schema: %v", err)
+		return nil, fmt.Errorf("recursively resolve schema %s: %v", &ref, err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("circular ref found when resolving schema: %s", &ref)
@@ -90,6 +91,7 @@ func (e *Expander) Expand() error {
 		}
 		nwl := []*Property{}
 		for _, prop := range wl {
+			log.Trace("expand", "prop", prop.addr.String(), "ref", prop.ref.String())
 			if err := e.expandPropStep(prop); err != nil {
 				return err
 			}
@@ -119,14 +121,18 @@ func (e *Expander) expandPropStep(prop *Property) error {
 	}
 	switch t {
 	case "array":
+		log.Trace("expand step", "type", "array", "prop", prop.addr.String(), "ref", prop.ref.String())
 		return e.expandPropStepAsArray(prop)
 	case "object":
 		if schema.Discriminator == "" {
 			if SchemaIsMap(schema) {
+				log.Trace("expand step", "type", "map", "prop", prop.addr.String(), "ref", prop.ref.String())
 				return e.expandPropAsMap(prop)
 			}
+			log.Trace("expand step", "type", "regular object", "prop", prop.addr.String(), "ref", prop.ref.String)
 			return e.expandPropAsRegularObject(prop)
 		}
+		log.Trace("expand step", "type", "polymorphic object", "prop", prop.addr.String(), "ref", prop.ref.String)
 		return e.expandPropAsPolymorphicObject(prop)
 	}
 	return nil

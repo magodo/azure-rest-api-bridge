@@ -10,9 +10,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
 	"github.com/magodo/azure-rest-api-bridge/log"
+	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 	"github.com/magodo/azure-rest-api-index/azidx"
 )
 
@@ -69,25 +69,24 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		writeError(err)
 		return
 	}
-	specFile := filepath.Join(srv.specdir, ref.GetURL().Path)
-	log.Debug("load swagger", "file", specFile)
-	doc, err := loads.Spec(specFile)
+	exp, err := swagger.NewExpanderFromGet(spec.MustCreateRef(filepath.Join(srv.specdir, ref.GetURL().Path) + "#" + ref.GetPointer().String()))
 	if err != nil {
 		writeError(err)
 		return
 	}
-	swg := doc.Spec()
-
-	log.Debug("get operation", "file", specFile, "ref", ref.String())
-	opRaw, _, err := ref.GetPointer().Get(swg)
+	if err := exp.Expand(); err != nil {
+		writeError(err)
+		return
+	}
+	syn := swagger.NewSynthesizer(exp.Root(), swagger.NewRnd(nil))
+	resps := syn.Synthesize()
+	resp := resps[0]
+	b, err := json.Marshal(resp)
 	if err != nil {
 		writeError(err)
 		return
 	}
-	operation := opRaw.(*spec.Operation)
-	_ = operation
-
-	w.Write([]byte(`{"name": "example-rg", "location": "example-location", "tags": {"foo": "bar"}}`))
+	w.Write(b)
 }
 
 func (srv *Server) Start() error {

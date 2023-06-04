@@ -15,7 +15,7 @@ func main() {
 	addr := flag.String("addr", "localhost", "Mock server address")
 	port := flag.Int("port", 8888, "Mock server port")
 	configFile := flag.String("config", "", "Execution config file")
-	verbose := flag.Bool("verbose", false, "Be verbose")
+	logLevel := flag.String("log-level", "INFO", "Log level")
 	specdir := flag.String("specdir", "", "Swagger specification directory")
 	index := flag.String("index", "", "Swagger index file")
 
@@ -23,11 +23,8 @@ func main() {
 
 	logOpt := &hclog.LoggerOptions{
 		Name:  "azure-rest-api-bridge",
-		Level: hclog.Info,
+		Level: hclog.LevelFromString(*logLevel),
 		Color: hclog.AutoColor,
-	}
-	if *verbose {
-		logOpt.Level = hclog.Debug
 	}
 	logger := hclog.New(logOpt)
 	log.SetLogger(logger)
