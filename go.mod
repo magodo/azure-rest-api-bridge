@@ -6,7 +6,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5
 	github.com/go-openapi/loads v0.21.2
 	github.com/go-openapi/spec v0.20.9
-	github.com/gofrs/uuid v4.4.0+incompatible
+	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/hcl/v2 v2.16.2
 	github.com/magodo/azure-rest-api-index v0.0.0-20230522080218-497fe558c02f
