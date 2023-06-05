@@ -81,6 +81,8 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 				result = []interface{}{syn.rnd.NextNumber(p.Schema.Format)}
 			case "boolean":
 				result = []interface{}{true}
+			case "object", "", "array":
+				// Returns nothing as this implies there is a circular ref hit
 			default:
 				panic(fmt.Sprintf("%s: unknwon schema type %s", *p, t))
 			}
