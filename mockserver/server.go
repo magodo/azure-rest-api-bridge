@@ -37,10 +37,10 @@ type Server struct {
 type Overrides []Override
 
 type Override struct {
-	PathPattern  regexp.Regexp
-	ResponseBody string
-	// JSON merge patch
-	ResponsePatch string
+	PathPattern        regexp.Regexp
+	ResponseBody       string
+	ResponseMergePatch string
+	ResponseJSONPatch  string
 }
 
 func (ovs Overrides) Match(path string) *Override {
@@ -88,7 +88,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	ov := srv.overrides.Match(r.URL.Path)
 
 	if ov != nil && ov.ResponseBody != "" {
-		log.Debug("override", "type", "body", "url", r.URL.String())
+		log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
 		w.Write([]byte(ov.ResponseBody))
 		return
 	}
@@ -103,7 +103,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		srv.writeError(w, err)
 		return
 	}
-	exp, err := swagger.NewExpanderFromGet(spec.MustCreateRef(filepath.Join(srv.specdir, ref.GetURL().Path) + "#" + ref.GetPointer().String()))
+	exp, err := swagger.NewExpanderFromOpRef(spec.MustCreateRef(filepath.Join(srv.specdir, ref.GetURL().Path) + "#" + ref.GetPointer().String()))
 	if err != nil {
 		srv.writeError(w, err)
 		return
@@ -121,15 +121,33 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ov != nil && ov.ResponsePatch != "" {
-		log.Debug("override", "type", "patch", "url", r.URL.String())
-		patch, err := jsonpatch.MergePatch(b, []byte(ov.ResponsePatch))
-		if err != nil {
-			srv.writeError(w, err)
+	if ov != nil {
+		if ov.ResponseMergePatch != "" {
+			log.Debug("override", "type", "merge patch", "url", r.URL.String(), "value", ov.ResponseMergePatch)
+			mb, err := jsonpatch.MergePatch(b, []byte(ov.ResponseMergePatch))
+			if err != nil {
+				srv.writeError(w, err)
+				return
+			}
+			w.Write(mb)
 			return
 		}
-		w.Write(patch)
-		return
+		if ov.ResponseJSONPatch != "" {
+			log.Debug("override", "type", "json patch", "url", r.URL.String(), "value", ov.ResponseJSONPatch)
+			patch, err := jsonpatch.DecodePatch([]byte(ov.ResponseJSONPatch))
+			if err != nil {
+				srv.writeError(w, err)
+				return
+			}
+			mb, err := patch.Apply(b)
+			if err != nil {
+				srv.writeError(w, err)
+				return
+			}
+			w.Write(mb)
+			return
+
+		}
 	}
 
 	w.Write(b)

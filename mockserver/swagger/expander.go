@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-openapi/spec"
 	"github.com/magodo/azure-rest-api-bridge/log"
@@ -38,26 +39,34 @@ func NewExpander(ref spec.Ref) (*Expander, error) {
 	}, nil
 }
 
-// NewExpanderFromGet create a expander for the successful response schema of an operation referenced by the input json reference.
-// The reference must be a normalized reference to the get operation.
-func NewExpanderFromGet(ref spec.Ref) (*Expander, error) {
+// NewExpanderFromOpRef create a expander for the successful response schema of an operation referenced by the input json reference.
+// The reference must be a normalized reference to the operation.
+func NewExpanderFromOpRef(ref spec.Ref) (*Expander, error) {
 	if !ref.HasFullFilePath {
 		return nil, fmt.Errorf("reference %s is not normalized", &ref)
 	}
 	tks := ref.GetPointer().DecodedTokens()
-	if l := len(tks); l == 0 || tks[l-1] != "get" {
-		return nil, fmt.Errorf("reference %s is not pointing to `get` operation", &ref)
+	if len(tks) == 0 {
+		return nil, fmt.Errorf("reference %s is an empty pointer", &ref)
 	}
+	opKind := tks[len(tks)-1]
 
 	piref := refutil.Parent(ref)
 	pi, err := spec.ResolvePathItemWithBase(nil, piref, nil)
 	if err != nil {
 		return nil, fmt.Errorf("resolving path item ref %s: %v", &piref, err)
 	}
-	op := pi.Get
-	if op == nil {
-		return nil, fmt.Errorf("no `get` operation defined by path item %s", &piref)
+
+	var op *spec.Operation
+	switch strings.ToLower(opKind) {
+	case "get":
+		op = pi.Get
+	case "post":
+		op = pi.Post
+	default:
+		return nil, fmt.Errorf("operation `%s` defined by path item %s is not supported", opKind, &piref)
 	}
+
 	if op.Responses == nil {
 		return nil, fmt.Errorf("operation refed by %s has no responses defined", &ref)
 	}
