@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/go-openapi/spec"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/magodo/azure-rest-api-bridge/log"
@@ -28,12 +29,28 @@ type Server struct {
 	idx     azidx.Index
 	specdir string
 
-	overrides []Override
+	// Followings are execution-based
+	rnd       swagger.Rnd
+	overrides Overrides
 }
 
+type Overrides []Override
+
 type Override struct {
-	PathPattern regexp.Regexp
-	Response    []byte
+	PathPattern  regexp.Regexp
+	ResponseBody string
+	// JSON merge patch
+	ResponsePatch string
+}
+
+func (ovs Overrides) Match(path string) *Override {
+	for _, ov := range ovs {
+		ov := ov
+		if ov.PathPattern.MatchString(path) {
+			return &ov
+		}
+	}
+	return nil
 }
 
 type Option struct {
@@ -43,6 +60,7 @@ type Option struct {
 	SpecDir string
 }
 
+// New creates a new (uninitialized) mockserver, which can be started, but needs to be initiated in order to work as expected.
 func New(opt Option) (*Server, error) {
 	b, err := os.ReadFile(opt.Index)
 	if err != nil {
@@ -67,6 +85,14 @@ func (srv *Server) writeError(w http.ResponseWriter, err error) {
 }
 
 func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
+	ov := srv.overrides.Match(r.URL.Path)
+
+	if ov != nil && ov.ResponseBody != "" {
+		log.Debug("override", "type", "body", "url", r.URL.String())
+		w.Write([]byte(ov.ResponseBody))
+		return
+	}
+
 	if strings.HasSuffix(r.URL.Path, "/oauth2/v2.0/token") {
 		srv.handleToken(w, r)
 		return
@@ -86,7 +112,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		srv.writeError(w, err)
 		return
 	}
-	syn := swagger.NewSynthesizer(exp.Root(), swagger.NewRnd(nil))
+	syn := swagger.NewSynthesizer(exp.Root(), &srv.rnd)
 	resps := syn.Synthesize()
 	resp := resps[0]
 	b, err := json.Marshal(resp)
@@ -94,6 +120,18 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		srv.writeError(w, err)
 		return
 	}
+
+	if ov != nil && ov.ResponsePatch != "" {
+		log.Debug("override", "type", "patch", "url", r.URL.String())
+		patch, err := jsonpatch.MergePatch(b, []byte(ov.ResponsePatch))
+		if err != nil {
+			srv.writeError(w, err)
+			return
+		}
+		w.Write(patch)
+		return
+	}
+
 	w.Write(b)
 }
 
@@ -167,6 +205,8 @@ func (srv *Server) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (srv *Server) UpdateOverrides(ov []Override) {
+// InitExecution initiates for each execution, for resetting the overrides and the rnd.
+func (srv *Server) InitExecution(ov []Override) {
 	srv.overrides = ov
+	srv.rnd = swagger.NewRnd(nil)
 }

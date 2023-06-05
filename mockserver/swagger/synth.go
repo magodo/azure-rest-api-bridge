@@ -7,10 +7,10 @@ import (
 
 type Synthesizer struct {
 	root *Property
-	rnd  Rnd
+	rnd  *Rnd
 }
 
-func NewSynthesizer(root *Property, rnd Rnd) Synthesizer {
+func NewSynthesizer(root *Property, rnd *Rnd) Synthesizer {
 	return Synthesizer{
 		root: root,
 		rnd:  rnd,

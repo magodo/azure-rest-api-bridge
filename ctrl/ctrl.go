@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -14,6 +15,8 @@ import (
 	"github.com/magodo/azure-rest-api-bridge/log"
 	"github.com/magodo/azure-rest-api-bridge/mockserver"
 	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/function"
+	"github.com/zclconf/go-cty/cty/function/stdlib"
 )
 
 type Option struct {
@@ -39,6 +42,9 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 	}
 	var execSpec Config
 	ctx := &hcl.EvalContext{
+		Functions: map[string]function.Function{
+			"jsonencode": stdlib.JSONEncodeFunc,
+		},
 		Variables: map[string]cty.Value{
 			"home":        cty.StringVal(homedir),
 			"server_addr": cty.StringVal(fmt.Sprintf("%s:%d", opt.ServerOption.Addr, opt.ServerOption.Port)),
@@ -46,6 +52,10 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 	}
 	if diags := gohcl.DecodeBody(f.Body, ctx, &execSpec); diags.HasErrors() {
 		return nil, fmt.Errorf("decoding %s: %v", opt.ConfigFile, diags.Error())
+	}
+
+	if err := validateExecSpec(execSpec); err != nil {
+		return nil, fmt.Errorf("invalid exec spec: %v", err)
 	}
 
 	srv, err := mockserver.New(opt.ServerOption)
@@ -59,6 +69,27 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 	}, nil
 }
 
+func validateExecSpec(spec Config) error {
+	validateOverride := func(ovs []Override) error {
+		for _, ov := range ovs {
+			if ov.ResponseBody == "" && ov.ResponsePatch == "" {
+				return fmt.Errorf("One override must have exactly one of `response_body` or `response_patch` specified")
+			}
+		}
+		return nil
+	}
+
+	if err := validateOverride(spec.Overrides); err != nil {
+		return err
+	}
+	for _, exec := range spec.Executions {
+		if err := validateOverride(exec.Overrides); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (ctrl *Ctrl) Run(ctx context.Context) error {
 	// Start mock server
 	log.Info("Starting the mock server")
@@ -70,6 +101,18 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	for _, execution := range ctrl.ExecSpec.Executions {
 		overrides := append([]Override{}, execution.Overrides...)
 		overrides = append(overrides, ctrl.ExecSpec.Overrides...)
+
+		var ovs []mockserver.Override
+		for _, override := range overrides {
+			ov := mockserver.Override{
+				PathPattern:   *regexp.MustCompile(override.PathPattern),
+				ResponseBody:  override.ResponseBody,
+				ResponsePatch: override.ResponsePatch,
+			}
+			ovs = append(ovs, ov)
+		}
+
+		ctrl.MockServer.InitExecution(ovs)
 
 		env := os.Environ()
 		for k, v := range execution.Env {

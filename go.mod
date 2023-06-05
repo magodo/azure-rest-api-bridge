@@ -3,6 +3,7 @@ module github.com/magodo/azure-rest-api-bridge
 go 1.20
 
 require (
+	github.com/evanphx/json-patch/v5 v5.6.0
 	github.com/go-openapi/jsonpointer v0.19.5
 	github.com/go-openapi/loads v0.21.2
 	github.com/go-openapi/spec v0.20.9
@@ -50,6 +51,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rickb777/plural v1.4.1 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect

@@ -200,7 +200,7 @@ func TestSynthesize(t *testing.T) {
 			exp, err := NewExpander(ref)
 			require.NoError(t, err)
 			require.NoError(t, exp.Expand())
-			syn := NewSynthesizer(exp.Root(), NewRnd(nil))
+			syn := NewSynthesizer(exp.Root(), ptr(NewRnd(nil)))
 			results := syn.Synthesize()
 			require.Len(t, results, len(tt.expect))
 			for i, res := range results {
