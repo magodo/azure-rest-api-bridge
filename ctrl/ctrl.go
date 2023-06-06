@@ -3,6 +3,7 @@ package ctrl
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -151,7 +152,21 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			return fmt.Errorf("running execution %q: %v", execution.Name, err)
 		}
 
-		log.Info("stdout", "message", stdout.String())
+		log.Info("stdout", stdout.String())
+
+		var appModel interface{}
+		if err := json.Unmarshal(stdout.Bytes(), &appModel); err != nil {
+			log.Error("post-execution unmarshal failure", "error", err, "stdout", stdout.String())
+			return fmt.Errorf("post-execution %q unmarshal: %v", execution.Name, err)
+		}
+
+		m, err := Map(appModel, ctrl.MockServer.Records()...)
+		if err != nil {
+			log.Error("post-execution map failure", "error", err)
+			return fmt.Errorf("post-execution %q map failure: %v", execution.Name, err)
+		}
+
+		fmt.Println(m)
 	}
 
 	// Stop mock server

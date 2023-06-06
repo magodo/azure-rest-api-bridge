@@ -36,7 +36,6 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 			}
 		case p.Children != nil:
 			m := map[string][]interface{}{}
-
 			// empty object
 			if len(p.Children) == 0 {
 				result = append(result, map[string]interface{}{"OBJKEY": "OBJVAL"})
@@ -93,21 +92,21 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 	return synProp(nil, syn.root)
 }
 
-func CatesianProduct(params ...[]interface{}) [][]interface{} {
+func CatesianProduct[T any](params ...[]T) [][]T {
 	if params == nil {
 		return nil
 	}
-	result := [][]interface{}{}
+	result := [][]T{}
 	for _, param := range params {
 		if len(param) != 0 {
-			newresult := [][]interface{}{}
+			newresult := [][]T{}
 			for _, v := range param {
 				if len(result) == 0 {
-					res := []interface{}{v}
+					res := []T{v}
 					newresult = append(newresult, res)
 				} else {
 					for _, res := range result {
-						nres := make([]interface{}, len(res))
+						nres := make([]T, len(res))
 						copy(nres, res)
 						nres = append(nres, v)
 						newresult = append(newresult, nres)
@@ -120,11 +119,11 @@ func CatesianProduct(params ...[]interface{}) [][]interface{} {
 	return result
 }
 
-func CatesianProductMap(params map[string][]interface{}) []map[string]interface{} {
+func CatesianProductMap[T any](params map[string][]T) []map[string]T {
 	if params == nil {
 		return nil
 	}
-	result := []map[string]interface{}{}
+	result := []map[string]T{}
 	keys := make([]string, 0, len(params))
 	for k := range params {
 		keys = append(keys, k)
@@ -133,14 +132,14 @@ func CatesianProductMap(params map[string][]interface{}) []map[string]interface{
 	for _, k := range keys {
 		param := params[k]
 		if len(param) != 0 {
-			newresult := []map[string]interface{}{}
+			newresult := []map[string]T{}
 			for _, v := range param {
 				if len(result) == 0 {
-					res := map[string]interface{}{k: v}
+					res := map[string]T{k: v}
 					newresult = append(newresult, res)
 				} else {
 					for _, res := range result {
-						nres := map[string]interface{}{}
+						nres := map[string]T{}
 						for kk, vv := range res {
 							nres[kk] = vv
 						}

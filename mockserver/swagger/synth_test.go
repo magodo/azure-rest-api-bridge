@@ -157,7 +157,10 @@ func TestSynthesize(t *testing.T) {
   },
   "number": 1.5,
   "object": {
-  	"string": "d"
+  	"p1": "d",
+	"obj": {
+		"pp1": 2
+	}
   },
   "string": "e"
 }

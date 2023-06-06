@@ -32,6 +32,7 @@ type Server struct {
 	// Followings are execution-based
 	rnd       swagger.Rnd
 	overrides Overrides
+	records   []swagger.JSONValue
 }
 
 type Overrides []Override
@@ -85,14 +86,6 @@ func (srv *Server) writeError(w http.ResponseWriter, err error) {
 }
 
 func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
-	ov := srv.overrides.Match(r.URL.Path)
-
-	if ov != nil && ov.ResponseBody != "" {
-		log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
-		w.Write([]byte(ov.ResponseBody))
-		return
-	}
-
 	if strings.HasSuffix(r.URL.Path, "/oauth2/v2.0/token") {
 		srv.handleToken(w, r)
 		return
@@ -121,36 +114,47 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ov := srv.overrides.Match(r.URL.Path)
+	if ov != nil && ov.ResponseBody != "" {
+		w.Write([]byte(ov.ResponseBody))
+		return
+	}
+
 	if ov != nil {
-		if ov.ResponseMergePatch != "" {
+		switch {
+		case ov.ResponseBody != "":
+			log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
+			b = []byte(ov.ResponseBody)
+		case ov.ResponseMergePatch != "":
 			log.Debug("override", "type", "merge patch", "url", r.URL.String(), "value", ov.ResponseMergePatch)
-			mb, err := jsonpatch.MergePatch(b, []byte(ov.ResponseMergePatch))
+			b, err = jsonpatch.MergePatch(b, []byte(ov.ResponseMergePatch))
 			if err != nil {
 				srv.writeError(w, err)
 				return
 			}
-			w.Write(mb)
-			return
-		}
-		if ov.ResponseJSONPatch != "" {
+		case ov.ResponseJSONPatch != "":
 			log.Debug("override", "type", "json patch", "url", r.URL.String(), "value", ov.ResponseJSONPatch)
 			patch, err := jsonpatch.DecodePatch([]byte(ov.ResponseJSONPatch))
 			if err != nil {
 				srv.writeError(w, err)
 				return
 			}
-			mb, err := patch.Apply(b)
+			b, err = patch.Apply(b)
 			if err != nil {
 				srv.writeError(w, err)
 				return
 			}
-			w.Write(mb)
-			return
-
 		}
 	}
 
+	v, err := swagger.UnmarshalJSONToJSONValue(b, exp.Root())
+	if err != nil {
+		srv.writeError(w, err)
+		return
+	}
+	srv.records = append(srv.records, v)
 	w.Write(b)
+	return
 }
 
 func (srv *Server) handleToken(w http.ResponseWriter, r *http.Request) {
@@ -227,4 +231,9 @@ func (srv *Server) Stop(ctx context.Context) error {
 func (srv *Server) InitExecution(ov []Override) {
 	srv.overrides = ov
 	srv.rnd = swagger.NewRnd(nil)
+	srv.records = nil
+}
+
+func (srv *Server) Records() []swagger.JSONValue {
+	return srv.records
 }

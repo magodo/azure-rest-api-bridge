@@ -18,8 +18,16 @@
                 "object": {
                     "type": "object",
                     "properties": {
-                        "string": {
+                        "p1": {
                             "type": "string"
+                        },
+                        "obj": {
+                            "type": "object",
+                            "properties": {
+                                "pp1": {
+                                    "type": "integer"
+                                }
+                            }
                         }
                     }
                 },

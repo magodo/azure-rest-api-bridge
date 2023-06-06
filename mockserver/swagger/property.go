@@ -14,6 +14,12 @@ type PropertyName struct {
 
 type PropertyAddr []PropertyAddrStep
 
+func (addr PropertyAddr) Copy() PropertyAddr {
+	naddr := make(PropertyAddr, len(addr))
+	copy(naddr, addr)
+	return naddr
+}
+
 type PropertyAddrStep struct {
 	Type  PropertyAddrStepType
 	Value string
