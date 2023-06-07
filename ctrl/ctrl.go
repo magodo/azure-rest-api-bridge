@@ -160,13 +160,19 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			return fmt.Errorf("post-execution %q unmarshal: %v", execution.Name, err)
 		}
 
-		m, err := Map(appModel, ctrl.MockServer.Records()...)
+		m, err := MapModels(appModel, ctrl.MockServer.Records()...)
 		if err != nil {
-			log.Error("post-execution map failure", "error", err)
-			return fmt.Errorf("post-execution %q map failure: %v", execution.Name, err)
+			log.Error("post-execution map models", "error", err)
+			return fmt.Errorf("post-execution %q map models: %v", execution.Name, err)
 		}
 
-		fmt.Println(m)
+		b, err := json.MarshalIndent(m, "", "  ")
+		if err != nil {
+			log.Error("post-execution marshalling map", "error", err)
+			return fmt.Errorf("post-execution %q marshalling map: %v", execution.Name, err)
+		}
+
+		fmt.Println(string(b))
 	}
 
 	// Stop mock server

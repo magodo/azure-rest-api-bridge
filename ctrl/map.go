@@ -9,12 +9,17 @@ import (
 	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 )
 
-func Map(appModel interface{}, apiModels ...swagger.JSONValue) (map[string]string, error) {
+// ModelMap maps a jsonpointer of a property in the application model to a property *definition* in the API model spec
+// In case there is no such property defintion (e.g. some undefined properties appear in an object), or the property definition
+// encountered a circular reference during its expansion, the value of the map is nil.
+type ModelMap map[string]*swagger.JSONValuePos
+
+func MapModels(appModel interface{}, apiModels ...swagger.JSONValue) (map[string]*swagger.JSONValuePos, error) {
 	apiValueMap, err := swagger.JSONValueValueMap(apiModels...)
 	if err != nil {
 		return nil, fmt.Errorf("building value map for API models: %v", err)
 	}
-	m := map[string]string{}
+	m := map[string]*swagger.JSONValuePos{}
 	appValueMap := jsonValueMap(appModel)
 	for val, appAddr := range appValueMap {
 		apiAddr, ok := apiValueMap[val]

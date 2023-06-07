@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/go-openapi/jsonreference"
 )
 
 type JSONValue interface {
@@ -12,7 +14,7 @@ type JSONValue interface {
 
 type JSONObject struct {
 	value map[string]JSONValue
-	addr  string
+	pos   *JSONValuePos
 }
 
 type primitiveType interface {
@@ -29,7 +31,7 @@ func (obj JSONObject) JSONValue() interface{} {
 
 type JSONArray struct {
 	value []JSONValue
-	addr  string
+	pos   *JSONValuePos
 }
 
 func (arr JSONArray) JSONValue() interface{} {
@@ -42,7 +44,7 @@ func (arr JSONArray) JSONValue() interface{} {
 
 type JSONPrimitive[T primitiveType] struct {
 	value T
-	addr  string
+	pos   *JSONValuePos
 }
 
 func (p JSONPrimitive[T]) JSONValue() interface{} {
@@ -65,13 +67,26 @@ func walkJSONValue(val JSONValue, fn func(val JSONValue)) {
 	return
 }
 
-// JSONValueValueMap merges one or more JSONValue into a map whose key is the un-ambiguous leaf value of the input JSONValue(s),
-// and the map value is the property's address.
-func JSONValueValueMap(l ...JSONValue) (map[string]string, error) {
-	out := map[string]string{}
+type JSONValuePos struct {
+	Ref  jsonreference.Ref `json:"ref"`
+	Addr PropertyAddr      `json:"addr"`
+}
+
+func (pos JSONValuePos) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"ref":  pos.Ref.String(),
+		"addr": pos.Addr.String(),
+	}
+	return json.Marshal(m)
+}
+
+// JSONValueValueMap merges one or more JSONValue into a map whose key is the un-ambiguous leaf value of the input JSONValue(s).
+// For the ambiguous leaf value (i.e. multiple properties among the JSONValue(s) have the same value), they are not included in the returning map.
+func JSONValueValueMap(l ...JSONValue) (map[string]*JSONValuePos, error) {
+	out := map[string]*JSONValuePos{}
 	dupm := map[string]bool{}
 
-	tryStore := func(k, v string) {
+	tryStore := func(k string, v *JSONValuePos) {
 		if dupm[k] {
 			return
 		}
@@ -86,15 +101,15 @@ func JSONValueValueMap(l ...JSONValue) (map[string]string, error) {
 	fn := func(val JSONValue) {
 		switch val := val.(type) {
 		case JSONPrimitive[float64]:
-			tryStore(strconv.FormatFloat(val.value, 'g', -1, 64), val.addr)
+			tryStore(strconv.FormatFloat(val.value, 'g', -1, 64), val.pos)
 		case JSONPrimitive[string]:
-			tryStore(val.value, val.addr)
+			tryStore(val.value, val.pos)
 		case JSONPrimitive[bool]:
 			v := "FALSE"
 			if val.value {
 				v = "TRUE"
 			}
-			tryStore(v, val.addr)
+			tryStore(v, val.pos)
 		}
 	}
 
@@ -115,25 +130,28 @@ func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
 	var val interface{}
 	var jsonVal func(v interface{}, prop *Property) (JSONValue, error)
 	jsonVal = func(v interface{}, prop *Property) (JSONValue, error) {
-		var addr string
+		var pos *JSONValuePos
 		if prop != nil {
-			addr = prop.addr.String()
+			pos = &JSONValuePos{
+				Addr: prop.addr,
+				Ref:  prop.ref.Ref,
+			}
 		}
 		switch v := v.(type) {
 		case float64:
 			return JSONPrimitive[float64]{
 				value: v,
-				addr:  addr,
+				pos:   pos,
 			}, nil
 		case string:
 			return JSONPrimitive[string]{
 				value: v,
-				addr:  addr,
+				pos:   pos,
 			}, nil
 		case bool:
 			return JSONPrimitive[bool]{
 				value: v,
-				addr:  addr,
+				pos:   pos,
 			}, nil
 		case nil:
 			return nil, nil
@@ -143,7 +161,7 @@ func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
 				p = prop.Element
 			}
 			sv := JSONArray{
-				addr: addr,
+				pos: pos,
 			}
 			for i, elem := range v {
 				nv, err := jsonVal(elem, p)
@@ -156,7 +174,7 @@ func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
 		case map[string]interface{}:
 			sv := JSONObject{
 				value: map[string]JSONValue{},
-				addr:  addr,
+				pos:   pos,
 			}
 			for k, elem := range v {
 				var p *Property
