@@ -80,12 +80,8 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
     It will prints something like below:
 
     ```
-    2023-06-07T11:47:01.319+0800 [INFO]  azure-rest-api-bridge: Starting the mock server
-    2023-06-07T11:47:01.319+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_resource_group
-    2023-06-07T11:47:02.181+0800 [INFO]  azure-rest-api-bridge: stdout:
-      EXTRA_VALUE_AT_END=
-      | {"id":"/subscriptions/foo/resourceGroups/rg","location":"c","name":"e","tags":{"KEY":"g"},"timeouts":null}
-
+    2023-06-07T11:51:51.505+0800 [INFO]  azure-rest-api-bridge: Starting the mock server
+    2023-06-07T11:51:51.505+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_resource_group
     {
       "/location": {
         "addr": "location",
@@ -100,11 +96,7 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
         "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/tags/additionalProperties"
       }
     }
-    2023-06-07T11:47:02.181+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_virtual_network
-    2023-06-07T11:47:03.708+0800 [INFO]  azure-rest-api-bridge: stdout:
-      EXTRA_VALUE_AT_END=
-      | {"address_space":["h"],"bgp_community":"j","ddos_protection_plan":[{"enable":true,"id":"k"}],"dns_servers":["l"],"edge_zone":"","flow_timeout_in_minutes":1,"guid":"p","id":"/subscriptions/foo/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/vnet","location":"f","name":"vnet","resource_group_name":"rg","subnet":[{"address_prefix":"t","id":"r","name":"s","security_group":"cj"}],"tags":{"KEY":"baw"},"timeouts":null}
-
+    2023-06-07T11:51:52.144+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_virtual_network
     {
       "/address_space/0": {
         "addr": "properties.addressSpace.addressPrefixes.*",
@@ -159,7 +151,7 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
         "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/network.json#/definitions/Resource/properties/tags/additionalProperties"
       }
     }
-    2023-06-07T11:47:03.709+0800 [INFO]  azure-rest-api-bridge: Stopping the mock server
+    2023-06-07T11:51:53.618+0800 [INFO]  azure-rest-api-bridge: Stopping the mock server
     ```
 
 ## Config Format

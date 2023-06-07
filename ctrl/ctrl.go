@@ -152,7 +152,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			return fmt.Errorf("running execution %q: %v", execution.Name, err)
 		}
 
-		log.Info("stdout", stdout.String())
+		log.Debug("execution result", "stdout", stdout.String())
 
 		var appModel interface{}
 		if err := json.Unmarshal(stdout.Bytes(), &appModel); err != nil {
