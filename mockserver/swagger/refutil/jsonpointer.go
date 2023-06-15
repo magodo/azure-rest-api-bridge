@@ -35,13 +35,6 @@ func JSONPointerOffsetMulti(ps []jsonpointer.Pointer, document string) (map[stri
 		}
 	}
 
-	tks := make(map[string]string, 0)
-	for k, p := range progressMap {
-		if len(p.decodedToken) > 0 {
-			tks[k] = p.decodedToken[0]
-		}
-	}
-
 	tk, err := dec.Token()
 	if err != nil {
 		return nil, err
@@ -142,7 +135,6 @@ func offsetSingleObjectForMulti(dec *json.Decoder, progressMap map[string]offset
 					}
 					progressMap[k] = p
 					nextLevelProgress[k] = p
-					isFirstTokenAfterHit = true
 					hit = true
 				}
 			}
