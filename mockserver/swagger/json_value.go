@@ -68,14 +68,18 @@ func walkJSONValue(val JSONValue, fn func(val JSONValue)) {
 }
 
 type JSONValuePos struct {
-	Ref  jsonreference.Ref `json:"ref"`
-	Addr PropertyAddr      `json:"addr"`
+	Ref        jsonreference.Ref `json:"ref"`
+	Addr       PropertyAddr      `json:"addr"`
+	LinkLocal  string            `json:"link_local,omitempty"`
+	LinkGithub string            `json:"link_github,omitempty"`
 }
 
 func (pos JSONValuePos) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{
-		"ref":  pos.Ref.String(),
-		"addr": pos.Addr.String(),
+		"ref":         pos.Ref.String(),
+		"addr":        pos.Addr.String(),
+		"link_local":  pos.LinkLocal,
+		"link_github": pos.LinkGithub,
 	}
 	return json.Marshal(m)
 }

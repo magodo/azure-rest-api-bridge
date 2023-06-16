@@ -53,18 +53,6 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
             "/subscriptions/foo/resourceGroups/rg",
         ]
     }
-
-    execution "azurerm_virtual_network" {
-        path = "${home}/go/bin/terraform-client-import"
-        args = [
-            "-path", 
-            "${home}/go/bin/terraform-provider-azurerm",
-            "-type",
-            "azurerm_virtual_network",
-            "-id",
-            "/subscriptions/foo/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/vnet",
-        ]
-    }
     ```
 
     There can be more than one `execution` blocks, where each one represents a run of some command. Each command expects to print the application model to the stdout if everything works smoothly.
@@ -80,78 +68,29 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
     It will prints something like below:
 
     ```
-    2023-06-07T11:51:51.505+0800 [INFO]  azure-rest-api-bridge: Starting the mock server
-    2023-06-07T11:51:51.505+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_resource_group
+    2023-06-16T18:15:03.131+0800 [INFO]  azure-rest-api-bridge: Starting the mock server
+    2023-06-16T18:15:03.131+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_resource_group
     {
       "/location": {
         "addr": "location",
+        "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5439",
+        "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5439:21",
         "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/location"
       },
       "/name": {
         "addr": "name",
+        "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5425",
+        "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5425:17",
         "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/name"
       },
       "/tags/KEY": {
         "addr": "tags.*",
+        "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5449",
+        "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5449:35",
         "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/tags/additionalProperties"
       }
     }
-    2023-06-07T11:51:52.144+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_virtual_network
-    {
-      "/address_space/0": {
-        "addr": "properties.addressSpace.addressPrefixes.*",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/virtualNetwork.json#/definitions/AddressSpace/properties/addressPrefixes/items"
-      },
-      "/bgp_community": {
-        "addr": "properties.bgpCommunities.virtualNetworkCommunity",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/virtualNetwork.json#/definitions/VirtualNetworkBgpCommunities/properties/virtualNetworkCommunity"
-      },
-      "/ddos_protection_plan/0/id": {
-        "addr": "properties.ddosProtectionPlan.id",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/network.json#/definitions/SubResource/properties/id"
-      },
-      "/dns_servers/0": {
-        "addr": "properties.dhcpOptions.dnsServers.*",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/virtualNetwork.json#/definitions/DhcpOptions/properties/dnsServers/items"
-      },
-      "/flow_timeout_in_minutes": {
-        "addr": "properties.flowTimeoutInMinutes",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/virtualNetwork.json#/definitions/VirtualNetworkPropertiesFormat/properties/flowTimeoutInMinutes"
-      },
-      "/guid": {
-        "addr": "properties.resourceGuid",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/virtualNetwork.json#/definitions/VirtualNetworkPropertiesFormat/properties/resourceGuid"
-      },
-      "/location": {
-        "addr": "location",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/network.json#/definitions/Resource/properties/location"
-      },
-      "/resource_group_name": {
-        "addr": "properties.subnets.*.properties.networkSecurityGroup.properties.networkInterfaces.*.properties.privateLinkService.properties.privateEndpointConnections.*.properties.privateEndpoint.properties.ipConfigurations.*.etag",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/privateEndpoint.json#/definitions/PrivateEndpointIPConfiguration/properties/etag"
-      },
-      "/subnet/0/address_prefix": {
-        "addr": "properties.subnets.*.properties.addressPrefix",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/virtualNetwork.json#/definitions/SubnetPropertiesFormat/properties/addressPrefix"
-      },
-      "/subnet/0/id": {
-        "addr": "properties.subnets.*.id",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/network.json#/definitions/SubResource/properties/id"
-      },
-      "/subnet/0/name": {
-        "addr": "properties.subnets.*.name",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/virtualNetwork.json#/definitions/Subnet/properties/name"
-      },
-      "/subnet/0/security_group": {
-        "addr": "properties.subnets.*.properties.networkSecurityGroup.id",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/network.json#/definitions/Resource/properties/id"
-      },
-      "/tags/KEY": {
-        "addr": "tags.*",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/network/resource-manager/Microsoft.Network/stable/2022-07-01/network.json#/definitions/Resource/properties/tags/additionalProperties"
-      }
-    }
-    2023-06-07T11:51:53.618+0800 [INFO]  azure-rest-api-bridge: Stopping the mock server
+    2023-06-16T18:15:03.601+0800 [INFO]  azure-rest-api-bridge: Stopping the mock server
     ```
 
 ## Config Format

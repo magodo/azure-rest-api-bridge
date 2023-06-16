@@ -4,13 +4,15 @@ go 1.20
 
 require (
 	github.com/evanphx/json-patch/v5 v5.6.0
-	github.com/go-openapi/jsonpointer v0.19.5
+	github.com/go-openapi/jsonpointer v0.19.6
+	github.com/go-openapi/jsonreference v0.20.0
 	github.com/go-openapi/loads v0.21.2
 	github.com/go-openapi/spec v0.20.9
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/hcl/v2 v2.16.2
 	github.com/magodo/azure-rest-api-index v0.0.0-20230522080218-497fe558c02f
+	github.com/magodo/jsonpointerpos v0.0.0-20230616092109-ca8d78efc96d
 	github.com/rickb777/date v1.20.1
 	github.com/stretchr/testify v1.8.1
 	github.com/zclconf/go-cty v1.12.1
@@ -32,9 +34,8 @@ require (
 	github.com/go-git/go-git/v5 v5.6.1 // indirect
 	github.com/go-openapi/analysis v0.21.4 // indirect
 	github.com/go-openapi/errors v0.20.2 // indirect
-	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/strfmt v0.21.3 // indirect
-	github.com/go-openapi/swag v0.21.1 // indirect
+	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -44,7 +45,7 @@ require (
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/magodo/armid v0.0.0-20230511151020-27880e5961c3 // indirect
 	github.com/magodo/workerpool v0.0.0-20230119025400-40192d2716ea // indirect
-	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
@@ -63,6 +64,5 @@ require (
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

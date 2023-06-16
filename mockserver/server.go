@@ -21,13 +21,13 @@ import (
 )
 
 type Server struct {
-	addr       string
-	port       int
+	Addr       string
+	Port       int
 	server     *http.Server
 	shutdownCh <-chan struct{}
 
-	idx     azidx.Index
-	specdir string
+	Idx     azidx.Index
+	Specdir string
 
 	// Followings are execution-based
 	rnd       swagger.Rnd
@@ -72,10 +72,10 @@ func New(opt Option) (*Server, error) {
 		return nil, fmt.Errorf("unmarshal index file: %v", err)
 	}
 	return &Server{
-		addr:    opt.Addr,
-		port:    opt.Port,
-		idx:     index,
-		specdir: opt.SpecDir,
+		Addr:    opt.Addr,
+		Port:    opt.Port,
+		Idx:     index,
+		Specdir: opt.SpecDir,
 	}, nil
 }
 
@@ -91,12 +91,12 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ref, err := srv.idx.Lookup(r.Method, *r.URL)
+	ref, err := srv.Idx.Lookup(r.Method, *r.URL)
 	if err != nil {
 		srv.writeError(w, err)
 		return
 	}
-	exp, err := swagger.NewExpanderFromOpRef(spec.MustCreateRef(filepath.Join(srv.specdir, ref.GetURL().Path) + "#" + ref.GetPointer().String()))
+	exp, err := swagger.NewExpanderFromOpRef(spec.MustCreateRef(filepath.Join(srv.Specdir, ref.GetURL().Path) + "#" + ref.GetPointer().String()))
 	if err != nil {
 		srv.writeError(w, err)
 		return
@@ -200,7 +200,7 @@ func (srv *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", srv.Handle)
 	server := &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", srv.addr, srv.port),
+		Addr:         fmt.Sprintf("%s:%d", srv.Addr, srv.Port),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		Handler:      mux,
