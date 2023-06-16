@@ -17,8 +17,6 @@ type offsetProgress struct {
 }
 
 // return map[p.String()]offset
-// use a map to keep progress of every pointer and do the parse in one pass.
-// use `-1` as error result.
 func JSONPointerOffsetMulti(ps []jsonpointer.Pointer, document string) (map[string]int64, error) {
 	dec := json.NewDecoder(strings.NewReader(document))
 
