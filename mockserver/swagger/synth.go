@@ -8,12 +8,22 @@ import (
 type Synthesizer struct {
 	root *Property
 	rnd  *Rnd
+
+	useEnumValues bool
 }
 
-func NewSynthesizer(root *Property, rnd *Rnd) Synthesizer {
+type SynthesizerOption struct {
+	UseEnumValues bool
+}
+
+func NewSynthesizer(root *Property, rnd *Rnd, opt *SynthesizerOption) Synthesizer {
+	if opt == nil {
+		opt = &SynthesizerOption{}
+	}
 	return Synthesizer{
-		root: root,
-		rnd:  rnd,
+		root:          root,
+		rnd:           rnd,
+		useEnumValues: opt.UseEnumValues,
 	}
 }
 
@@ -72,7 +82,11 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 					result = []interface{}{parent.DiscriminatorValue}
 				} else {
 					// regular string
-					result = []interface{}{syn.rnd.NextString(p.Schema.Format)}
+					if syn.useEnumValues && len(p.Schema.Enum) != 0 {
+						result = []interface{}{p.Schema.Enum[0].(string)}
+					} else {
+						result = []interface{}{syn.rnd.NextString(p.Schema.Format)}
+					}
 				}
 			case "integer":
 				result = []interface{}{syn.rnd.NextInteger(p.Schema.Format)}

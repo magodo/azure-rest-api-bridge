@@ -9,6 +9,7 @@ import (
 	"github.com/magodo/azure-rest-api-bridge/ctrl"
 	"github.com/magodo/azure-rest-api-bridge/log"
 	"github.com/magodo/azure-rest-api-bridge/mockserver"
+	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 )
 
 func main() {
@@ -18,6 +19,7 @@ func main() {
 	logLevel := flag.String("log-level", "INFO", "Log level")
 	specdir := flag.String("specdir", "", "Swagger specification directory")
 	index := flag.String("index", "", "Swagger index file")
+	synUseEnum := flag.Bool("syn-use-enum", false, "Whether to use enum values defined in Swagger when synthesize responses")
 
 	flag.Parse()
 
@@ -36,6 +38,9 @@ func main() {
 			Port:    *port,
 			Index:   *index,
 			SpecDir: *specdir,
+			SynthOpt: &swagger.SynthesizerOption{
+				UseEnumValues: *synUseEnum,
+			},
 		},
 	})
 	if err != nil {

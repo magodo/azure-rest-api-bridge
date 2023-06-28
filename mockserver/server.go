@@ -26,8 +26,9 @@ type Server struct {
 	server     *http.Server
 	shutdownCh <-chan struct{}
 
-	Idx     azidx.Index
-	Specdir string
+	Idx      azidx.Index
+	Specdir  string
+	synthOpt *swagger.SynthesizerOption
 
 	// Followings are execution-based
 	rnd       swagger.Rnd
@@ -56,10 +57,11 @@ func (ovs Overrides) Match(path string) *Override {
 }
 
 type Option struct {
-	Addr    string
-	Port    int
-	Index   string
-	SpecDir string
+	Addr     string
+	Port     int
+	Index    string
+	SpecDir  string
+	SynthOpt *swagger.SynthesizerOption
 }
 
 // New creates a new (uninitialized) mockserver, which can be started, but needs to be initiated in order to work as expected.
@@ -73,10 +75,11 @@ func New(opt Option) (*Server, error) {
 		return nil, fmt.Errorf("unmarshal index file: %v", err)
 	}
 	return &Server{
-		Addr:    opt.Addr,
-		Port:    opt.Port,
-		Idx:     index,
-		Specdir: opt.SpecDir,
+		Addr:     opt.Addr,
+		Port:     opt.Port,
+		Idx:      index,
+		Specdir:  opt.SpecDir,
+		synthOpt: opt.SynthOpt,
 	}, nil
 }
 
@@ -162,7 +165,7 @@ func (srv *Server) synthResponse(r *http.Request) ([]interface{}, *swagger.Prope
 	if err := exp.Expand(); err != nil {
 		return nil, nil, err
 	}
-	syn := swagger.NewSynthesizer(exp.Root(), &srv.rnd)
+	syn := swagger.NewSynthesizer(exp.Root(), &srv.rnd, srv.synthOpt)
 	return syn.Synthesize(), exp.Root(), nil
 }
 

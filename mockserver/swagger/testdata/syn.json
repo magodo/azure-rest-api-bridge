@@ -48,6 +48,18 @@
                 }
             }
         },
+        "enumobject": {
+            "type": "object",
+            "properties": {
+                "prop": {
+                    "type": "string",
+                    "enum": [
+                        "foo",
+                        "bar"
+                    ]
+                }
+            }
+        },
         "base": {
             "discriminator": "type",
             "properties": {

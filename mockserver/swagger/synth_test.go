@@ -137,6 +137,7 @@ func TestSynthesize(t *testing.T) {
 
 	cases := []struct {
 		ref    string
+		opt    *SynthesizerOption
 		expect []string
 	}{
 		{
@@ -215,6 +216,17 @@ func TestSynthesize(t *testing.T) {
 				`,
 			},
 		},
+		{
+			ref: specpathSyn + "#/definitions/enumobject",
+			opt: &SynthesizerOption{UseEnumValues: true},
+			expect: []string{
+				`
+{
+	"prop": "foo"
+}
+				`,
+			},
+		},
 	}
 
 	for _, tt := range cases {
@@ -223,7 +235,7 @@ func TestSynthesize(t *testing.T) {
 			exp, err := NewExpander(ref)
 			require.NoError(t, err)
 			require.NoError(t, exp.Expand())
-			syn := NewSynthesizer(exp.Root(), ptr(NewRnd(nil)))
+			syn := NewSynthesizer(exp.Root(), ptr(NewRnd(nil)), tt.opt)
 			results := syn.Synthesize()
 			require.Len(t, results, len(tt.expect))
 			for i, res := range results {
