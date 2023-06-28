@@ -132,6 +132,17 @@ func JSONValueValueMap(l ...JSONValue) (map[string]*JSONValuePos, error) {
 
 func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
 	var val interface{}
+
+	if err := json.Unmarshal(b, &val); err != nil {
+		return nil, err
+	}
+
+	// In case the root property is polymorphic, get the variant based on the input json value
+	if len(root.Variant) != 0 {
+		val := val.(map[string]interface{})
+		root = root.Variant[val[root.Schema.Discriminator].(string)]
+	}
+
 	var jsonVal func(v interface{}, prop *Property) (JSONValue, error)
 	jsonVal = func(v interface{}, prop *Property) (JSONValue, error) {
 		var pos *JSONValuePos
@@ -201,10 +212,6 @@ func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
 		default:
 			return nil, fmt.Errorf("invalid type: %v (type: %T)", v, v)
 		}
-	}
-
-	if err := json.Unmarshal(b, &val); err != nil {
-		return nil, err
 	}
 
 	return jsonVal(val, root)

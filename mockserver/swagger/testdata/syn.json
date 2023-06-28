@@ -72,6 +72,19 @@
                     "type": "string"
                 }
             }
+        },
+        "msbase": {
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["xvar1"]
+                }
+            }
+        },
+        "msvar1": {
+            "allOf": [{"$ref": "#/definitions/msbase"}],
+            "x-ms-discriminator-value": "xvar1"
         }
     }
 }

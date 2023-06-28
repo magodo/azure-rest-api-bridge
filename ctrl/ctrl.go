@@ -73,18 +73,17 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 func validateExecSpec(spec Config) error {
 	validateOverride := func(ovs []Override) error {
 		for _, ov := range ovs {
-			cnt := 0
+			if ov.ResponseBody+ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch == "" {
+				return fmt.Errorf("empty override block is not allowed")
+			}
 			if ov.ResponseBody != "" {
-				cnt++
+				if ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch != "" {
+					return fmt.Errorf("`response_body` can only be exclusive specified")
+				}
+				continue
 			}
-			if ov.ResponseMergePatch != "" {
-				cnt++
-			}
-			if ov.ResponseJSONPatch != "" {
-				cnt++
-			}
-			if cnt != 1 {
-				return fmt.Errorf("One override must have exactly one of `response_body`, `response_merge_patch` or `response_json_patch` specified")
+			if ov.ResponseJSONPatch != "" && ov.ResponseMergePatch != "" {
+				return fmt.Errorf("`response_merge_patch` conflicts with `response_json_patch`")
 			}
 		}
 		return nil
@@ -117,6 +116,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		for _, override := range overrides {
 			ov := mockserver.Override{
 				PathPattern:        *regexp.MustCompile(override.PathPattern),
+				ResponseSelector:   override.ResponseSelector,
 				ResponseBody:       override.ResponseBody,
 				ResponseMergePatch: override.ResponseMergePatch,
 				ResponseJSONPatch:  override.ResponseJSONPatch,

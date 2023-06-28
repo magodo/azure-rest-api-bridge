@@ -87,6 +87,10 @@ type Property struct {
 	// This only applies to property that is a variant schema.
 	Discriminator string
 
+	// DiscriminatorValue indicates the discriminator value.
+	// This only applies to property that is a variant schema.
+	DiscriminatorValue string
+
 	// Children represents the child properties of an object
 	// At most one of Children, Element and Variant is non nil
 	Children map[string]*Property

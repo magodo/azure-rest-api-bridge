@@ -39,6 +39,7 @@ type Overrides []Override
 
 type Override struct {
 	PathPattern        regexp.Regexp
+	ResponseSelector   string
 	ResponseBody       string
 	ResponseMergePatch string
 	ResponseJSONPatch  string
@@ -91,40 +92,30 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ref, err := srv.Idx.Lookup(r.Method, *r.URL)
-	if err != nil {
-		srv.writeError(w, err)
+	ov := srv.overrides.Match(r.URL.Path)
+
+	// Override response body, just return the hardcoded response body
+	if ov != nil && ov.ResponseBody != "" {
+		log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
+		w.Write([]byte(ov.ResponseBody))
 		return
 	}
-	exp, err := swagger.NewExpanderFromOpRef(spec.MustCreateRef(filepath.Join(srv.Specdir, ref.GetURL().Path) + "#" + ref.GetPointer().String()))
-	if err != nil {
-		srv.writeError(w, err)
-		return
-	}
-	if err := exp.Expand(); err != nil {
-		srv.writeError(w, err)
-		return
-	}
-	syn := swagger.NewSynthesizer(exp.Root(), &srv.rnd)
-	resps := syn.Synthesize()
-	resp := resps[0]
-	b, err := json.Marshal(resp)
+
+	// Otherwise, we'll synthesize the response based on its swagger definition
+	resps, expRoot, err := srv.synthResponse(r)
 	if err != nil {
 		srv.writeError(w, err)
 		return
 	}
 
-	ov := srv.overrides.Match(r.URL.Path)
-	if ov != nil && ov.ResponseBody != "" {
-		w.Write([]byte(ov.ResponseBody))
+	b, err := srv.selResponse(resps, ov)
+	if err != nil {
+		srv.writeError(w, err)
 		return
 	}
 
 	if ov != nil {
 		switch {
-		case ov.ResponseBody != "":
-			log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
-			b = []byte(ov.ResponseBody)
 		case ov.ResponseMergePatch != "":
 			log.Debug("override", "type", "merge patch", "url", r.URL.String(), "value", ov.ResponseMergePatch)
 			b, err = jsonpatch.MergePatch(b, []byte(ov.ResponseMergePatch))
@@ -147,7 +138,9 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	v, err := swagger.UnmarshalJSONToJSONValue(b, exp.Root())
+	log.Debug("server handler", "response", string(b))
+
+	v, err := swagger.UnmarshalJSONToJSONValue(b, expRoot)
 	if err != nil {
 		srv.writeError(w, err)
 		return
@@ -155,6 +148,52 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	srv.records = append(srv.records, v)
 	w.Write(b)
 	return
+}
+
+func (srv *Server) synthResponse(r *http.Request) ([]interface{}, *swagger.Property, error) {
+	ref, err := srv.Idx.Lookup(r.Method, *r.URL)
+	if err != nil {
+		return nil, nil, err
+	}
+	exp, err := swagger.NewExpanderFromOpRef(spec.MustCreateRef(filepath.Join(srv.Specdir, ref.GetURL().Path) + "#" + ref.GetPointer().String()))
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := exp.Expand(); err != nil {
+		return nil, nil, err
+	}
+	syn := swagger.NewSynthesizer(exp.Root(), &srv.rnd)
+	return syn.Synthesize(), exp.Root(), nil
+}
+
+func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error) {
+	if len(resps) == 0 {
+		return nil, fmt.Errorf("no responses to select")
+	}
+
+	if len(resps) == 1 || ov == nil || ov.ResponseSelector == "" {
+		// Pick the first synthesized response if there is exactly one response, or users no selector set
+		return json.Marshal(resps[0])
+	}
+
+	for _, resp := range resps {
+		bOld, err := json.Marshal(resp)
+		if err != nil {
+			return nil, err
+		}
+		log.Debug("override", "type", "selector", "sel", ov.ResponseSelector, "resp", string(bOld))
+
+		// Each selector is a json merge patch, we expect to apply this patch to the response and pick
+		// the one that has no difference between the itself and with the patch applied.
+		bNew, err := jsonpatch.MergePatch(bOld, []byte(ov.ResponseSelector))
+		if err != nil {
+			return nil, err
+		}
+		if string(bOld) == string(bNew) {
+			return bOld, nil
+		}
+	}
+	return nil, fmt.Errorf("no synth response found with the response selector: %s", ov.ResponseSelector)
 }
 
 func (srv *Server) handleToken(w http.ResponseWriter, r *http.Request) {

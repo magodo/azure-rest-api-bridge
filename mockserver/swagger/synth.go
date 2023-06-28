@@ -69,7 +69,7 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 			case "string":
 				if parent != nil && parent.Discriminator != "" && parent.Discriminator == p.Name() {
 					// discriminator property
-					result = []interface{}{parent.SchemaName()}
+					result = []interface{}{parent.DiscriminatorValue}
 				} else {
 					// regular string
 					result = []interface{}{syn.rnd.NextString(p.Schema.Format)}

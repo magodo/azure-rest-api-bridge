@@ -287,6 +287,36 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 				},
 			},
 		},
+		{
+			ref: specpathSyn + "#/definitions/base",
+			input: `
+{
+  "type": "var1",
+  "prop1": "foo"
+}`,
+			expect: JSONObject{
+				value: map[string]JSONValue{
+					"type": JSONPrimitive[string]{
+						value: "var1",
+						pos: &JSONValuePos{
+							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/base/properties/type"),
+							Addr: ParseAddr("{var1}.type"),
+						},
+					},
+					"prop1": JSONPrimitive[string]{
+						value: "foo",
+						pos: &JSONValuePos{
+							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/var1/properties/prop1"),
+							Addr: ParseAddr("{var1}.prop1"),
+						},
+					},
+				},
+				pos: &JSONValuePos{
+					Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/var1"),
+					Addr: ParseAddr("{var1}"),
+				},
+			},
+		},
 	}
 
 	for _, tt := range cases {

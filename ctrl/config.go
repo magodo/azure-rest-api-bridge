@@ -7,6 +7,7 @@ type Config struct {
 
 type Override struct {
 	PathPattern        string `hcl:"path_pattern,attr"`
+	ResponseSelector   string `hcl:"response_selector,optional"`
 	ResponseBody       string `hcl:"response_body,optional"`
 	ResponseMergePatch string `hcl:"response_merge_patch,optional"`
 	ResponseJSONPatch  string `hcl:"response_json_patch,optional"`

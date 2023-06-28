@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
 	"github.com/magodo/azure-rest-api-bridge/log"
 	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger/refutil"
@@ -15,6 +16,11 @@ type Expander struct {
 	// Operation ref
 	ref  spec.Ref
 	root *Property
+
+	// variantMap maps the x-ms-discriminator-value to the model name in "/definitions".
+	// The format of the map is: {"parentModelName": {"childVariantValue": "childModelName"}}
+	// This map is not initialized until the first time failed to resolve the model by the discriminator enum value.
+	variantMap map[string]map[string]string
 }
 
 // NewExpander create a expander for the schema referenced by the input json reference.
@@ -138,10 +144,10 @@ func (e *Expander) expandPropStep(prop *Property) error {
 				log.Trace("expand step", "type", "map", "prop", prop.addr.String(), "ref", prop.ref.String())
 				return e.expandPropAsMap(prop)
 			}
-			log.Trace("expand step", "type", "regular object", "prop", prop.addr.String(), "ref", prop.ref.String)
+			log.Trace("expand step", "type", "regular object", "prop", prop.addr.String(), "ref", prop.ref.String())
 			return e.expandPropAsRegularObject(prop)
 		}
-		log.Trace("expand step", "type", "polymorphic object", "prop", prop.addr.String(), "ref", prop.ref.String)
+		log.Trace("expand step", "type", "polymorphic object", "prop", prop.addr.String(), "ref", prop.ref.String())
 		return e.expandPropAsPolymorphicObject(prop)
 	}
 	return nil
@@ -245,6 +251,11 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 		// If any of the allOfs is a discriminator, we'll need to mark the current property's discriminator
 		if schema.Discriminator != "" {
 			prop.Discriminator = schema.Discriminator
+			dval := prop.SchemaName()
+			if v, ok := prop.Schema.Extensions["x-ms-discriminator-value"]; ok {
+				dval = v.(string)
+			}
+			prop.DiscriminatorValue = dval
 		}
 		tmpExp := Expander{
 			ref: ownRef,
@@ -278,12 +289,12 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 	if err != nil {
 		return fmt.Errorf("%s: recursively resolving discriminator property's(%s) schema: %v", prop.addr, schema.Discriminator, err)
 	}
-	for _, name := range dsch.Enum {
-		name := name.(string)
+	for _, dval := range dsch.Enum {
+		dval := dval.(string)
 		addr := append(PropertyAddr{}, prop.addr...)
 		addr = append(addr, PropertyAddrStep{
 			Type:  PropertyAddrStepTypeVariant,
-			Value: name,
+			Value: dval,
 		})
 		visited := map[string]bool{}
 		for k, v := range prop.visitedRefs {
@@ -293,21 +304,84 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 			}
 			visited[k] = v
 		}
-		vref := spec.MustCreateRef(prop.ref.GetURL().Path + "#/definitions/" + name)
+
+		// Firstly, assume the model name is the same as the discriminator enum value.
+		vref := spec.MustCreateRef(prop.ref.GetURL().Path + "#/definitions/" + dval)
 		psch, ownRef, visited, ok, err := refutil.RResolve(vref, visited, true)
+		if err == nil {
+			if !ok {
+				continue
+			}
+			prop.Variant[dval] = &Property{
+				Schema:      psch,
+				ref:         ownRef,
+				addr:        addr,
+				visitedRefs: visited,
+			}
+			continue
+		}
+
+		log.Trace("expand step", "type", "polymorphic object", "prop", addr, "ref", vref.String(), "discriminator value", dval, "warn", "failed to resolve variant schema")
+
+		// (Expensive) Use x-ms-discriminator-value as the variant model indicator
+		if e.variantMap == nil {
+			if err := e.initVariantMap(); err != nil {
+				return err
+			}
+		}
+		parentName := prop.SchemaName()
+		mm, ok := e.variantMap[parentName]
+		if !ok {
+			return fmt.Errorf("model named %s is not discriminator", parentName)
+		}
+		modelName, ok := mm[dval]
+		if !ok {
+			return fmt.Errorf("no model in current spec is a variant of value %s", dval)
+		}
+		vref = spec.MustCreateRef(prop.ref.GetURL().Path + "#/definitions/" + modelName)
+		psch, ownRef, visited, ok, err = refutil.RResolve(vref, visited, true)
 		if err != nil {
-			return fmt.Errorf("%s: recursively resolving variant schema (%s): %v", addr, name, err)
+			return fmt.Errorf("%s: recursively resolving variant schema (%s): %v", addr, modelName, err)
 		}
 		if !ok {
 			continue
 		}
-		prop.Variant[name] = &Property{
+		prop.Variant[dval] = &Property{
 			Schema:      psch,
 			ref:         ownRef,
 			addr:        addr,
 			visitedRefs: visited,
 		}
 	}
+	return nil
+}
+
+func (e *Expander) initVariantMap() error {
+	doc, err := loads.Spec(e.ref.GetURL().Path)
+	if err != nil {
+		return err
+	}
+	definitions := doc.Spec().Definitions
+	m := map[string]map[string]string{}
+	for modelName, def := range definitions {
+		if def.Discriminator != "" {
+			m[modelName] = map[string]string{}
+		}
+	}
+	for modelName, def := range definitions {
+		if v, ok := def.Extensions["x-ms-discriminator-value"]; ok {
+			for _, allOf := range def.AllOf {
+				if allOf.Ref.String() == "" {
+					continue
+				}
+				parent := refutil.Last(allOf.Ref.Ref)
+				if mm, ok := m[parent]; ok {
+					mm[v.(string)] = modelName
+				}
+			}
+		}
+	}
+	e.variantMap = m
 	return nil
 }
 
