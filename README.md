@@ -156,7 +156,6 @@ Available variables:
 
 - `home`: The path to the user's home directory
 - `server_addr`: The address in form of "addr:port" that the mock server listens to 
-- `output-one-json`: Wheather output all execution result in one json object, defaults to `false`.
 
 Available functions:
 
