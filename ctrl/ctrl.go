@@ -21,13 +21,15 @@ import (
 )
 
 type Option struct {
-	ConfigFile   string
-	ServerOption mockserver.Option
+	ConfigFile    string
+	ContinueOnErr bool
+	ServerOption  mockserver.Option
 }
 
 type Ctrl struct {
-	ExecSpec   Config
-	MockServer mockserver.Server
+	ExecSpec      Config
+	ContinueOnErr bool
+	MockServer    mockserver.Server
 }
 
 func NewCtrl(opt Option) (*Ctrl, error) {
@@ -65,8 +67,9 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 	}
 
 	return &Ctrl{
-		ExecSpec:   execSpec,
-		MockServer: *srv,
+		ExecSpec:      execSpec,
+		ContinueOnErr: opt.ContinueOnErr,
+		MockServer:    *srv,
 	}, nil
 }
 
@@ -109,75 +112,85 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 
 	// Launch each execution
 	for _, execution := range ctrl.ExecSpec.Executions {
-		overrides := append([]Override{}, execution.Overrides...)
-		overrides = append(overrides, ctrl.ExecSpec.Overrides...)
+		run := func(execution Execution) error {
+			overrides := append([]Override{}, execution.Overrides...)
+			overrides = append(overrides, ctrl.ExecSpec.Overrides...)
 
-		var ovs []mockserver.Override
-		for _, override := range overrides {
-			ov := mockserver.Override{
-				PathPattern:        *regexp.MustCompile(override.PathPattern),
-				ResponseSelector:   override.ResponseSelector,
-				ResponseBody:       override.ResponseBody,
-				ResponseMergePatch: override.ResponseMergePatch,
-				ResponseJSONPatch:  override.ResponseJSONPatch,
+			var ovs []mockserver.Override
+			for _, override := range overrides {
+				ov := mockserver.Override{
+					PathPattern:        *regexp.MustCompile(override.PathPattern),
+					ResponseSelector:   override.ResponseSelector,
+					ResponseBody:       override.ResponseBody,
+					ResponseMergePatch: override.ResponseMergePatch,
+					ResponseJSONPatch:  override.ResponseJSONPatch,
+				}
+				ovs = append(ovs, ov)
 			}
-			ovs = append(ovs, ov)
+
+			ctrl.MockServer.InitExecution(ovs)
+
+			env := os.Environ()
+			for k, v := range execution.Env {
+				env = append(env, k+"="+v)
+			}
+
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+
+			cmd := exec.Cmd{
+				Path:   execution.Path,
+				Args:   append([]string{filepath.Base(execution.Path)}, execution.Args...),
+				Env:    env,
+				Dir:    execution.Dir,
+				Stdout: &stdout,
+				Stderr: &stderr,
+			}
+
+			log.Info(fmt.Sprintf("Executing %s", execution.Name))
+
+			log.Debug("execution detail", "path", execution.Path, "args", execution.Args, "env", env, "dir", execution.Dir)
+
+			if err := cmd.Run(); err != nil {
+				log.Error("run failure", "stdout", stdout.String(), "stderr", stderr.String())
+				return fmt.Errorf("running execution %q: %v", execution.Name, err)
+			}
+
+			log.Debug("execution result", "stdout", stdout.String())
+
+			var appModel interface{}
+			if err := json.Unmarshal(stdout.Bytes(), &appModel); err != nil {
+				log.Error("post-execution unmarshal failure", "error", err, "stdout", stdout.String())
+				return fmt.Errorf("post-execution %q unmarshal: %v", execution.Name, err)
+			}
+
+			m, err := MapModels(appModel, ctrl.MockServer.Records()...)
+			if err != nil {
+				log.Error("post-execution map models", "error", err)
+				return fmt.Errorf("post-execution %q map models: %v", execution.Name, err)
+			}
+
+			if err := m.AddLink(ctrl.MockServer.Idx.Commit, ctrl.MockServer.Specdir); err != nil {
+				log.Error("post-execution model map adding link", "error", err)
+				return fmt.Errorf("post-execution model map adding link: %v", err)
+			}
+
+			b, err := json.MarshalIndent(m, "", "  ")
+			if err != nil {
+				log.Error("post-execution marshalling map", "error", err)
+				return fmt.Errorf("post-execution %q marshalling map: %v", execution.Name, err)
+			}
+
+			fmt.Println(string(b))
+			return nil
 		}
 
-		ctrl.MockServer.InitExecution(ovs)
-
-		env := os.Environ()
-		for k, v := range execution.Env {
-			env = append(env, k+"="+v)
+		if err := run(execution); err != nil {
+			if ctrl.ContinueOnErr {
+				continue
+			}
+			return err
 		}
-
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		cmd := exec.Cmd{
-			Path:   execution.Path,
-			Args:   append([]string{filepath.Base(execution.Path)}, execution.Args...),
-			Env:    env,
-			Dir:    execution.Dir,
-			Stdout: &stdout,
-			Stderr: &stderr,
-		}
-
-		log.Info(fmt.Sprintf("Executing %s", execution.Name))
-
-		log.Debug("execution detail", "path", execution.Path, "args", execution.Args, "env", env, "dir", execution.Dir)
-
-		if err := cmd.Run(); err != nil {
-			log.Error("run failure", "stdout", stdout.String(), "stderr", stderr.String())
-			return fmt.Errorf("running execution %q: %v", execution.Name, err)
-		}
-
-		log.Debug("execution result", "stdout", stdout.String())
-
-		var appModel interface{}
-		if err := json.Unmarshal(stdout.Bytes(), &appModel); err != nil {
-			log.Error("post-execution unmarshal failure", "error", err, "stdout", stdout.String())
-			return fmt.Errorf("post-execution %q unmarshal: %v", execution.Name, err)
-		}
-
-		m, err := MapModels(appModel, ctrl.MockServer.Records()...)
-		if err != nil {
-			log.Error("post-execution map models", "error", err)
-			return fmt.Errorf("post-execution %q map models: %v", execution.Name, err)
-		}
-
-		if err := m.AddLink(ctrl.MockServer.Idx.Commit, ctrl.MockServer.Specdir); err != nil {
-			log.Error("post-execution model map adding link", "error", err)
-			return fmt.Errorf("post-execution model map adding link: %v", err)
-		}
-
-		b, err := json.MarshalIndent(m, "", "  ")
-		if err != nil {
-			log.Error("post-execution marshalling map", "error", err)
-			return fmt.Errorf("post-execution %q marshalling map: %v", execution.Name, err)
-		}
-
-		fmt.Println(string(b))
 	}
 
 	// Stop mock server

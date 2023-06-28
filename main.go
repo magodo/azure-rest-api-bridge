@@ -20,6 +20,7 @@ func main() {
 	specdir := flag.String("specdir", "", "Swagger specification directory")
 	index := flag.String("index", "", "Swagger index file")
 	synUseEnum := flag.Bool("syn-use-enum", false, "Whether to use enum values defined in Swagger when synthesize responses")
+	continueOnErr := flag.Bool("k", false, "Whether to continue on error")
 
 	flag.Parse()
 
@@ -32,7 +33,8 @@ func main() {
 	log.SetLogger(logger)
 
 	ctrl, err := ctrl.NewCtrl(ctrl.Option{
-		ConfigFile: *configFile,
+		ConfigFile:    *configFile,
+		ContinueOnErr: *continueOnErr,
 		ServerOption: mockserver.Option{
 			Addr:    *addr,
 			Port:    *port,
