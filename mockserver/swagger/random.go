@@ -103,7 +103,13 @@ func (rnd Rnd) genString(format string) string {
 	case "uri", "url":
 		return "https://" + rnd.rawString + ".com"
 	case "uuid":
-		panic("TODO: support uuid format")
+		if rnd.rawInteger <= 0xffffffffffff {
+			return "00000000-0000-0000-0000-" + fmt.Sprintf("%012x", rnd.rawInteger)
+		} else {
+			high := rnd.rawInteger / 0x1000000000000
+			low := rnd.rawInteger % 0x1000000000000
+			return "00000000-0000-0000-" + fmt.Sprintf("%04x", high) + "-" + fmt.Sprintf("%012x", low)
+		}
 	default:
 		return rnd.rawString
 	}
@@ -134,7 +140,7 @@ func (rnd *Rnd) NextString(format string) string {
 	case "uri", "url":
 		rnd.updateRawString()
 	case "uuid":
-		panic("TODO: support uuid format")
+		rnd.updateRawInteger()
 	default:
 		rnd.updateRawString()
 	}

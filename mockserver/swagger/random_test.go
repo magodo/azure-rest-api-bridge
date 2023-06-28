@@ -10,10 +10,11 @@ import (
 func TestRnd(t *testing.T) {
 	initRnd := NewRnd(nil)
 	cases := []struct {
-		typ    string
-		format string
-		again  bool
-		expect interface{}
+		typ     string
+		format  string
+		again   bool
+		initRnd *Rnd
+		expect  interface{}
 	}{
 		{
 			typ:    "string",
@@ -224,6 +225,23 @@ func TestRnd(t *testing.T) {
 			again:  true,
 			expect: "https://c.com",
 		},
+		{
+			typ:    "string",
+			format: "uuid",
+			expect: "00000000-0000-0000-0000-000000000001",
+		},
+		{
+			typ:     "string",
+			format:  "uuid",
+			initRnd: &Rnd{rawInteger: 0xfffffffffffe},
+			expect:  "00000000-0000-0000-0000-ffffffffffff",
+		},
+		{
+			typ:     "string",
+			format:  "uuid",
+			initRnd: &Rnd{rawInteger: 0xffffffffffff},
+			expect:  "00000000-0000-0000-0001-000000000000",
+		},
 	}
 
 	for _, tt := range cases {
@@ -236,6 +254,9 @@ func TestRnd(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			rnd := initRnd
+			if tt.initRnd != nil {
+				rnd = *tt.initRnd
+			}
 			var v interface{}
 			switch tt.typ {
 			case "string":
