@@ -48,7 +48,7 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 			m := map[string][]interface{}{}
 			// empty object
 			if len(p.Children) == 0 {
-				result = append(result, map[string]interface{}{"OBJKEY": "OBJVAL"})
+				result = append(result, map[string]interface{}{})
 			} else {
 				keys := make([]string, 0, len(p.Children))
 				for k := range p.Children {

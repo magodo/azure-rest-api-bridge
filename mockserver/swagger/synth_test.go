@@ -149,9 +149,7 @@ func TestSynthesize(t *testing.T) {
     "b"
   ],
   "boolean": true,
-  "emptyObject": {
-  	"OBJKEY": "OBJVAL"
-  },
+  "emptyObject": {},
   "integer": 1,
   "map": {
     "KEY": "c"
