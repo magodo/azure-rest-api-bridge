@@ -118,8 +118,13 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	}
 
 	outputs := make(map[string]interface{})
+
+	execTotal := len(ctrl.ExecSpec.Executions)
+	execSucceed := 0
+	execFail := 0
+
 	// Launch each execution
-	for _, execution := range ctrl.ExecSpec.Executions {
+	for i, execution := range ctrl.ExecSpec.Executions {
 		run := func(execution Execution) error {
 			overrides := append([]Override{}, execution.Overrides...)
 			overrides = append(overrides, ctrl.ExecSpec.Overrides...)
@@ -155,7 +160,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 				Stderr: &stderr,
 			}
 
-			log.Info(fmt.Sprintf("Executing %s", execution.Name))
+			log.Info(fmt.Sprintf("Executing %s (%d/%d)", execution.Name, i+1, execTotal))
 
 			log.Debug("execution detail", "path", execution.Path, "args", execution.Args, "env", env, "dir", execution.Dir)
 
@@ -190,10 +195,17 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 
 		if err := run(execution); err != nil {
 			if ctrl.ContinueOnErr {
+				execFail++
 				continue
 			}
 			return err
+		} else {
+			execSucceed++
 		}
+	}
+
+	if ctrl.ContinueOnErr {
+		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execTotal)
 	}
 
 	b, err := json.MarshalIndent(outputs, "", "  ")
