@@ -95,11 +95,18 @@ func validateExecSpec(spec Config) error {
 	if err := validateOverride(spec.Overrides); err != nil {
 		return err
 	}
+
+	execNames := make(map[string]bool)
 	for _, exec := range spec.Executions {
 		if err := validateOverride(exec.Overrides); err != nil {
 			return err
 		}
+		if _, exist := execNames[exec.Name]; exist {
+			return fmt.Errorf("duplicated execution %s", exec.Name)
+		}
+		execNames[exec.Name] = true
 	}
+
 	return nil
 }
 
@@ -110,6 +117,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		return err
 	}
 
+	outputs := make(map[string]interface{})
 	// Launch each execution
 	for _, execution := range ctrl.ExecSpec.Executions {
 		run := func(execution Execution) error {
@@ -175,13 +183,8 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 				return fmt.Errorf("post-execution model map adding link: %v", err)
 			}
 
-			b, err := json.MarshalIndent(m, "", "  ")
-			if err != nil {
-				log.Error("post-execution marshalling map", "error", err)
-				return fmt.Errorf("post-execution %q marshalling map: %v", execution.Name, err)
-			}
+			outputs[execution.Name] = m
 
-			fmt.Println(string(b))
 			return nil
 		}
 
@@ -192,6 +195,14 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			return err
 		}
 	}
+
+	b, err := json.MarshalIndent(outputs, "", "  ")
+	if err != nil {
+		log.Error("post-execution marshalling map", "error", err)
+		return fmt.Errorf("post-execution marshalling map: %v", err)
+	}
+
+	fmt.Println(string(b))
 
 	// Stop mock server
 	log.Info("Stopping the mock server")
