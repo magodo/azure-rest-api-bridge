@@ -20,6 +20,8 @@ type ModelMap map[string]*swagger.JSONValuePos
 func (m ModelMap) AddLink(commit, specdir string) error {
 	pm := map[string][]jsonpointer.Pointer{}
 	for _, v := range m {
+		// We deliberately not nil checking `jsonpos` here, as the response is generated with the guarantee that no circular/undefined property will be generated.
+		// In other words, the jsonpos here must be non-nil. Otherwise, it indicates a bug in the code.
 		filepath := v.Ref.GetURL().Path
 		pm[filepath] = append(pm[filepath], *v.Ref.GetPointer())
 	}

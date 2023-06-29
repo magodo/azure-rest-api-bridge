@@ -85,6 +85,13 @@
                 }
             }
         },
+        "use_base": {
+            "properties": {
+                "prop": {
+                    "$ref": "#/definitions/base"
+                }
+            }
+        },
         "msbase": {
             "discriminator": "type",
             "properties": {

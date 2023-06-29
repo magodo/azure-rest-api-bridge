@@ -137,15 +137,16 @@ func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
 		return nil, err
 	}
 
-	// In case the root property is polymorphic, get the variant based on the input json value
-	if len(root.Variant) != 0 {
-		val := val.(map[string]interface{})
-		root = root.Variant[val[root.Schema.Discriminator].(string)]
-	}
-
 	var jsonVal func(v interface{}, prop *Property) (JSONValue, error)
 	jsonVal = func(v interface{}, prop *Property) (JSONValue, error) {
+		// In case the property is polymorphic, get the variant based on the input json value
+		if prop != nil && len(prop.Variant) != 0 {
+			v := v.(map[string]interface{})
+			prop = prop.Variant[v[prop.Schema.Discriminator].(string)]
+		}
+
 		var pos *JSONValuePos
+
 		if prop != nil {
 			pos = &JSONValuePos{
 				Addr: prop.addr,
