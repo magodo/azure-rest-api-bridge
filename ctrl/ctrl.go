@@ -205,7 +205,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	}
 
 	if ctrl.ContinueOnErr {
-		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execTotal)
+		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execFail)
 	}
 
 	b, err := json.MarshalIndent(outputs, "", "  ")
