@@ -71,23 +71,25 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
     2023-06-16T18:15:03.131+0800 [INFO]  azure-rest-api-bridge: Starting the mock server
     2023-06-16T18:15:03.131+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_resource_group
     {
-      "/location": {
-        "addr": "location",
-        "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5439",
-        "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5439:21",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/location"
-      },
-      "/name": {
-        "addr": "name",
-        "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5425",
-        "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5425:17",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/name"
-      },
-      "/tags/KEY": {
-        "addr": "tags.*",
-        "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5449",
-        "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5449:35",
-        "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/tags/additionalProperties"
+      "azurerm_resource_group": {
+          "/location": {
+            "addr": "location",
+            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5439",
+            "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5439:21",
+            "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/location"
+          },
+          "/name": {
+            "addr": "name",
+            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5425",
+            "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5425:17",
+            "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/name"
+          },
+          "/tags/KEY": {
+            "addr": "tags.*",
+            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5449",
+            "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5449:35",
+            "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/tags/additionalProperties"
+          }
       }
     }
     2023-06-16T18:15:03.601+0800 [INFO]  azure-rest-api-bridge: Stopping the mock server
@@ -151,6 +153,8 @@ execution "name" {
     ]
 }
 ```
+
+Note that the execution `name` must be unique.
 
 Available variables:
 
