@@ -149,6 +149,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	srv.records = append(srv.records, v)
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(b)
 	return
 }
