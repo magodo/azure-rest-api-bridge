@@ -189,9 +189,6 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 	addr = append(addr, PropertyAddrStep{
 		Type: PropertyAddrStepTypeIndex,
 	})
-	if schema.AdditionalProperties.Schema == nil {
-		return fmt.Errorf("%s: additionalProperties is not a single schema (not supported yet)", addr)
-	}
 	schema, ownRef, visited, ok, err := refutil.RResolve(refutil.Append(prop.ref, "additionalProperties"), prop.visitedRefs, false)
 	if err != nil {
 		return fmt.Errorf("%s: recursively resolving additionalProperties: %v", addr, err)
