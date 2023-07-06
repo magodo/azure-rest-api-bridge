@@ -88,6 +88,8 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 						result = []interface{}{syn.rnd.NextString(p.Schema.Format)}
 					}
 				}
+			case "file":
+				result = []interface{}{syn.rnd.NextString(p.Schema.Format)}
 			case "integer":
 				result = []interface{}{syn.rnd.NextInteger(p.Schema.Format)}
 			case "number":
@@ -97,7 +99,7 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 			case "object", "", "array":
 				// Returns nothing as this implies there is a circular ref hit
 			default:
-				panic(fmt.Sprintf("%s: unknwon schema type %s", *p, t))
+				panic(fmt.Sprintf("%s: unknown schema type %s", *p, t))
 			}
 		}
 		return result
