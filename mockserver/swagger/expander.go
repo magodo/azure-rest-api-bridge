@@ -333,7 +333,8 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 		}
 		modelName, ok := mm[dval]
 		if !ok {
-			return fmt.Errorf("no model in current spec is a variant of value %s", dval)
+			log.Warn(fmt.Sprintf("no model in current spec is a variant of value %s", dval))
+			continue
 		}
 		vref = spec.MustCreateRef(prop.ref.GetURL().Path + "#/definitions/" + modelName)
 		psch, ownRef, visited, ok, err = refutil.RResolve(vref, visited, true)

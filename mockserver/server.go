@@ -176,6 +176,9 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 	}
 
 	if len(resps) == 1 || ov == nil || ov.ResponseSelector == "" {
+		if n := len(resps); n > 1 {
+			log.Warn(fmt.Sprintf("select the 1st response from %d", n))
+		}
 		// Pick the first synthesized response if there is exactly one response, or users no selector set
 		return json.Marshal(resps[0])
 	}
