@@ -3,6 +3,7 @@ package swagger
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -286,7 +287,33 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 	if err != nil {
 		return fmt.Errorf("%s: recursively resolving discriminator property's(%s) schema: %v", prop.addr, schema.Discriminator, err)
 	}
-	for _, dval := range dsch.Enum {
+
+	parentName := prop.SchemaName()
+
+	// Some poor swagger doesn't define the discriminator property's enum values.
+	// We have to analyzing the whole swagger to get all its possible variants.
+	dvals := dsch.Enum
+	if len(dvals) == 0 {
+		if e.variantMap == nil {
+			if err := e.initVariantMap(); err != nil {
+				return err
+			}
+		}
+		mm, ok := e.variantMap[parentName]
+		if !ok {
+			return fmt.Errorf("model named %s is not discriminator", parentName)
+		}
+		var l []string
+		for k := range mm {
+			l = append(l, k)
+		}
+		sort.StringSlice(l).Sort()
+		for _, dval := range l {
+			dvals = append(dvals, dval)
+		}
+	}
+
+	for _, dval := range dvals {
 		dval := dval.(string)
 		addr := append(PropertyAddr{}, prop.addr...)
 		addr = append(addr, PropertyAddrStep{
@@ -326,7 +353,6 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 				return err
 			}
 		}
-		parentName := prop.SchemaName()
 		mm, ok := e.variantMap[parentName]
 		if !ok {
 			return fmt.Errorf("model named %s is not discriminator", parentName)
