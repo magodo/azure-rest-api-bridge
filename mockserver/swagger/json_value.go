@@ -124,7 +124,7 @@ func JSONValueValueMap(l ...JSONValue) (map[string]*JSONValuePos, error) {
 		case JSONObject:
 			walkJSONValue(v, fn)
 		default:
-			return nil, fmt.Errorf("%d-th element is not an JSONArray or JSONObject", i)
+			return nil, fmt.Errorf("%d-th element is not an JSONArray or JSONObject: %T", i, v)
 		}
 	}
 	return out, nil
