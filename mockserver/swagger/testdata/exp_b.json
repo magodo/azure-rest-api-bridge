@@ -1,0 +1,25 @@
+{
+    "definitions": {
+        "BBase": {
+            "type": "object",
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "BVar"
+                    ]
+                }
+            }
+        },
+        "BarVar": {
+            "type": "object",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/BBase"
+                }
+            ],
+            "x-ms-discriminator-value": "BVar"
+        }
+    }
+}

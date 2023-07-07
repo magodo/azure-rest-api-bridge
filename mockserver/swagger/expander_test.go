@@ -15,16 +15,19 @@ func TestExpand(t *testing.T) {
 	require.NoError(t, err)
 
 	specpathA := filepath.Join(pwd, "testdata", "exp_a.json")
+	specpathB := filepath.Join(pwd, "testdata", "exp_b.json")
 
 	cases := []struct {
-		name   string
-		ref    string
-		verify func(*testing.T, *Property, *spec.Swagger)
+		name       string
+		ref        string
+		otherspecs []string
+		verify     func(*testing.T, *Property, ...*spec.Swagger)
 	}{
 		{
-			name: specpathA,
+			name: "Pet",
 			ref:  specpathA + "#/definitions/Pet",
-			verify: func(t *testing.T, root *Property, swg *spec.Swagger) {
+			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
+				swg := swgs[0]
 				expect := &Property{
 					Schema: ptr(swg.Definitions["Pet"]),
 					addr:   RootAddr,
@@ -199,9 +202,10 @@ func TestExpand(t *testing.T) {
 			},
 		},
 		{
-			name: specpathA,
+			name: "Dog",
 			ref:  specpathA + "#/definitions/Dog",
-			verify: func(t *testing.T, root *Property, swg *spec.Swagger) {
+			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
+				swg := swgs[0]
 				expect := &Property{
 					Schema:             ptr(swg.Definitions["Dog"]),
 					Discriminator:      "type",
@@ -286,9 +290,10 @@ func TestExpand(t *testing.T) {
 			},
 		},
 		{
-			name: specpathA,
+			name: "MsPet",
 			ref:  specpathA + "#/definitions/MsPet",
-			verify: func(t *testing.T, root *Property, swg *spec.Swagger) {
+			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
+				swg := swgs[0]
 				expect := &Property{
 					Schema: ptr(swg.Definitions["MsPet"]),
 					addr:   RootAddr,
@@ -324,9 +329,10 @@ func TestExpand(t *testing.T) {
 			},
 		},
 		{
-			name: specpathA,
+			name: "ConflictBase",
 			ref:  specpathA + "#/definitions/ConflictBase",
-			verify: func(t *testing.T, root *Property, swg *spec.Swagger) {
+			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
+				swg := swgs[0]
 				expect := &Property{
 					Schema: ptr(swg.Definitions["ConflictBase"]),
 					addr:   RootAddr,
@@ -361,6 +367,59 @@ func TestExpand(t *testing.T) {
 				require.Equal(t, expect, root)
 			},
 		},
+		{
+			name:       "UseExtBase",
+			ref:        specpathA + "#/definitions/UseExtBase",
+			otherspecs: []string{specpathB},
+			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
+				swgA, swgB := swgs[0], swgs[1]
+				expect := &Property{
+					Schema: ptr(swgA.Definitions["UseExtBase"]),
+					addr:   RootAddr,
+					visitedRefs: map[string]bool{
+						specpathA + "#/definitions/UseExtBase": true,
+					},
+					ref: spec.MustCreateRef(specpathA + "#/definitions/UseExtBase"),
+					Children: map[string]*Property{
+						"foo": {
+							Schema: ptr(swgB.Definitions["BBase"]),
+							addr:   ParseAddr("foo"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/UseExtBase": true,
+								specpathB + "#/definitions/BBase":      true,
+							},
+							ref: spec.MustCreateRef(specpathB + "#/definitions/BBase"),
+							Variant: map[string]*Property{
+								"BVar": {
+									Schema:             ptr(swgB.Definitions["BarVar"]),
+									Discriminator:      "type",
+									DiscriminatorValue: "BVar",
+									addr:               ParseAddr("foo.{BVar}"),
+									visitedRefs: map[string]bool{
+										specpathA + "#/definitions/UseExtBase": true,
+										specpathB + "#/definitions/BarVar":     true,
+									},
+									ref: spec.MustCreateRef(specpathB + "#/definitions/BarVar"),
+									Children: map[string]*Property{
+										"type": {
+											Schema: ptr(swgB.Definitions["BBase"].Properties["type"]),
+											addr:   ParseAddr("foo.{BVar}.type"),
+											visitedRefs: map[string]bool{
+												specpathA + "#/definitions/UseExtBase": true,
+												specpathB + "#/definitions/BBase":      true,
+												specpathB + "#/definitions/BarVar":     true,
+											},
+											ref: spec.MustCreateRef(specpathB + "#/definitions/BBase/properties/type"),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				require.Equal(t, expect, root)
+			},
+		},
 	}
 
 	for _, tt := range cases {
@@ -371,7 +430,14 @@ func TestExpand(t *testing.T) {
 			require.NoError(t, exp.Expand())
 			doc, err := loads.Spec(ref.GetURL().Path)
 			require.NoError(t, err)
-			tt.verify(t, exp.root, doc.Spec())
+
+			specs := []*spec.Swagger{doc.Spec()}
+			for _, spec := range tt.otherspecs {
+				doc, err := loads.Spec(spec)
+				require.NoError(t, err)
+				specs = append(specs, doc.Spec())
+			}
+			tt.verify(t, exp.root, specs...)
 		})
 	}
 }

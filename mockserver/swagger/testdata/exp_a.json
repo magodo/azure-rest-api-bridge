@@ -108,6 +108,14 @@
                 }
             ],
             "x-ms-discriminator-value": "ConflictVar"
+        },
+        "UseExtBase": {
+            "type": "object",
+            "properties": {
+                "foo": {
+                    "$ref": "./exp_b.json#/definitions/BBase"
+                }
+            }
         }
     }
 }
