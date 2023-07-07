@@ -14,7 +14,7 @@ func TestExpand(t *testing.T) {
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
 
-	specpathA := filepath.Join(pwd, "testdata", "a.json")
+	specpathA := filepath.Join(pwd, "testdata", "exp_a.json")
 
 	cases := []struct {
 		name   string
@@ -315,6 +315,44 @@ func TestExpand(t *testing.T) {
 										specpathA + "#/definitions/MsDog": true,
 									},
 									ref: spec.MustCreateRef(specpathA + "#/definitions/MsPet/properties/type"),
+								},
+							},
+						},
+					},
+				}
+				require.Equal(t, expect, root)
+			},
+		},
+		{
+			name: specpathA,
+			ref:  specpathA + "#/definitions/ConflictBase",
+			verify: func(t *testing.T, root *Property, swg *spec.Swagger) {
+				expect := &Property{
+					Schema: ptr(swg.Definitions["ConflictBase"]),
+					addr:   RootAddr,
+					visitedRefs: map[string]bool{
+						specpathA + "#/definitions/ConflictBase": true,
+					},
+					ref: spec.MustCreateRef(specpathA + "#/definitions/ConflictBase"),
+					Variant: map[string]*Property{
+						"ConflictVar": {
+							Schema:             ptr(swg.Definitions["RealConflictVar"]),
+							Discriminator:      "type",
+							DiscriminatorValue: "ConflictVar",
+							addr:               ParseAddr("{ConflictVar}"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/RealConflictVar": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/RealConflictVar"),
+							Children: map[string]*Property{
+								"type": {
+									Schema: ptr(swg.Definitions["ConflictBase"].Properties["type"]),
+									addr:   ParseAddr("{ConflictVar}.type"),
+									visitedRefs: map[string]bool{
+										specpathA + "#/definitions/RealConflictVar": true,
+										specpathA + "#/definitions/ConflictBase":    true,
+									},
+									ref: spec.MustCreateRef(specpathA + "#/definitions/ConflictBase/properties/type"),
 								},
 							},
 						},

@@ -84,6 +84,30 @@
                 }
             ],
             "x-ms-discriminator-value": "CuteDog"
+        },
+        "ConflictBase": {
+            "type": "object",
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "ConflictVar"
+                    ]
+                }
+            }
+        },
+        "ConflictVar": {
+            "type": "object"
+        },
+        "RealConflictVar": {
+            "type": "object",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/ConflictBase"
+                }
+            ],
+            "x-ms-discriminator-value": "ConflictVar"
         }
     }
 }

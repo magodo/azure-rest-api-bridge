@@ -331,7 +331,7 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 
 		// Firstly, assume the model name is the same as the discriminator enum value.
 		vref := spec.MustCreateRef(prop.ref.GetURL().Path + "#/definitions/" + dval)
-		psch, ownRef, visited, ok, err := refutil.RResolve(vref, visited, true)
+		psch, ownRef, pvisited, ok, err := refutil.RResolve(vref, visited, true)
 		if err == nil {
 			if !ok {
 				continue
@@ -354,7 +354,7 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 					Schema:      psch,
 					ref:         ownRef,
 					addr:        addr,
-					visitedRefs: visited,
+					visitedRefs: pvisited,
 				}
 				continue
 			}
