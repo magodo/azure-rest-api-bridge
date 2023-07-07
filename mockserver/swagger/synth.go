@@ -72,6 +72,9 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 				result = append(result, synProp(p, p.Variant[k])...)
 			}
 		default:
+			if p.Schema == nil {
+				return result
+			}
 			if len(p.Schema.Type) != 1 {
 				panic(fmt.Sprintf("%s: schema type as array is not supported", *p))
 			}

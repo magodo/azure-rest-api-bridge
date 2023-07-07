@@ -24,6 +24,153 @@ func TestExpand(t *testing.T) {
 		verify     func(*testing.T, *Property, ...*spec.Swagger)
 	}{
 		{
+			name: "object",
+			ref:  specpathA + "#/definitions/object",
+			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
+				swg := swgs[0]
+				expect := &Property{
+					Schema: ptr(swg.Definitions["object"]),
+					addr:   RootAddr,
+					visitedRefs: map[string]bool{
+						specpathA + "#/definitions/object": true,
+					},
+					ref: spec.MustCreateRef(specpathA + "#/definitions/object"),
+					Children: map[string]*Property{
+						"number": {
+							Schema: ptr(swg.Definitions["object"].Properties["number"]),
+							addr:   ParseAddr("number"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/number"),
+						},
+						"integer": {
+							Schema: ptr(swg.Definitions["object"].Properties["integer"]),
+							addr:   ParseAddr("integer"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/integer"),
+						},
+						"string": {
+							Schema: ptr(swg.Definitions["object"].Properties["string"]),
+							addr:   ParseAddr("string"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/string"),
+						},
+						"boolean": {
+							Schema: ptr(swg.Definitions["object"].Properties["boolean"]),
+							addr:   ParseAddr("boolean"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/boolean"),
+						},
+						"object": {
+							Schema: ptr(swg.Definitions["object"].Properties["object"]),
+							addr:   ParseAddr("object"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/object"),
+							Children: map[string]*Property{
+								"p1": {
+									Schema: ptr(swg.Definitions["object"].Properties["object"].Properties["p1"]),
+									addr:   ParseAddr("object.p1"),
+									visitedRefs: map[string]bool{
+										specpathA + "#/definitions/object": true,
+									},
+									ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/object/properties/p1"),
+								},
+								"obj": {
+									Schema: ptr(swg.Definitions["object"].Properties["object"].Properties["obj"]),
+									addr:   ParseAddr("object.obj"),
+									visitedRefs: map[string]bool{
+										specpathA + "#/definitions/object": true,
+									},
+									ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/object/properties/obj"),
+									Children: map[string]*Property{
+										"pp1": {
+											Schema: ptr(swg.Definitions["object"].Properties["object"].Properties["obj"].Properties["pp1"]),
+											addr:   ParseAddr("object.obj.pp1"),
+											visitedRefs: map[string]bool{
+												specpathA + "#/definitions/object": true,
+											},
+											ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/object/properties/obj/properties/pp1"),
+										},
+									},
+								},
+							},
+						},
+						"emptyObject": {
+							Schema: ptr(swg.Definitions["object"].Properties["emptyObject"]),
+							addr:   ParseAddr("emptyObject"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref:      spec.MustCreateRef(specpathA + "#/definitions/object/properties/emptyObject"),
+							Children: map[string]*Property{},
+						},
+						"array": {
+							Schema: ptr(swg.Definitions["object"].Properties["array"]),
+							addr:   ParseAddr("array"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/array"),
+							Element: &Property{
+								Schema: swg.Definitions["object"].Properties["array"].Items.Schema,
+								addr:   ParseAddr("array.*"),
+								visitedRefs: map[string]bool{
+									specpathA + "#/definitions/object": true,
+								},
+								ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/array/items"),
+							},
+						},
+						"map": {
+							Schema: ptr(swg.Definitions["object"].Properties["map"]),
+							addr:   ParseAddr("map"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/map"),
+							Element: &Property{
+								Schema: swg.Definitions["object"].Properties["map"].AdditionalProperties.Schema,
+								addr:   ParseAddr("map.*"),
+								visitedRefs: map[string]bool{
+									specpathA + "#/definitions/object": true,
+								},
+								ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/map/additionalProperties"),
+							},
+						},
+						"map2": {
+							Schema: ptr(swg.Definitions["object"].Properties["map2"]),
+							addr:   ParseAddr("map2"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/object": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/map2"),
+							Element: &Property{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type: spec.StringOrArray{"string"},
+									},
+								},
+								addr: ParseAddr("map2.*"),
+								visitedRefs: map[string]bool{
+									specpathA + "#/definitions/object": true,
+								},
+								ref: spec.MustCreateRef(specpathA + "#/definitions/object/properties/map2/additionalProperties"),
+							},
+						},
+					},
+				}
+				require.Equal(t, expect, root)
+			},
+		},
+		{
 			name: "Pet",
 			ref:  specpathA + "#/definitions/Pet",
 			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {

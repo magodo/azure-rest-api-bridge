@@ -13,6 +13,58 @@
         }
     },
     "definitions": {
+        "object": {
+            "type": "object",
+            "properties": {
+                "number": {
+                    "type": "number"
+                },
+                "integer": {
+                    "type": "integer"
+                },
+                "string": {
+                    "type": "string"
+                },
+                "boolean": {
+                    "type": "boolean"
+                },
+                "object": {
+                    "type": "object",
+                    "properties": {
+                        "p1": {
+                            "type": "string"
+                        },
+                        "obj": {
+                            "type": "object",
+                            "properties": {
+                                "pp1": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                },
+                "emptyObject": {
+                    "type": "object"
+                },
+                "array": {
+                    "type": "array",
+                    "items":  {
+                        "type": "string"
+                    }
+                },
+                "map": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "map2": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
         "Pet": {
             "description": "Pet",
             "type": "object",

@@ -128,6 +128,9 @@ func (e *Expander) Expand() error {
 }
 
 func (e *Expander) expandPropStep(prop *Property) error {
+	if prop.Schema == nil {
+		return nil
+	}
 	if len(prop.Schema.Type) > 1 {
 		return fmt.Errorf("%s: type of property type is an array (not supported yet)", prop.addr)
 	}
@@ -191,6 +194,26 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 	addr = append(addr, PropertyAddrStep{
 		Type: PropertyAddrStepTypeIndex,
 	})
+
+	// For definition as below, the .Schema is nil. While .Allow is always true when .AdditionalProperties != nil:
+	//   "map": {
+	//       "type": "object",
+	//       "additionalProperties": true
+	//   }
+	if schema.AdditionalProperties.Schema == nil {
+		prop.Element = &Property{
+			Schema: &spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Type: spec.StringOrArray{"string"},
+				},
+			},
+			ref:         refutil.Append(prop.ref, "additionalProperties"),
+			addr:        addr,
+			visitedRefs: prop.visitedRefs,
+		}
+		return nil
+	}
+
 	schema, ownRef, visited, ok, err := refutil.RResolve(refutil.Append(prop.ref, "additionalProperties"), prop.visitedRefs, false)
 	if err != nil {
 		return fmt.Errorf("%s: recursively resolving additionalProperties: %v", addr, err)

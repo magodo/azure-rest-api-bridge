@@ -154,14 +154,17 @@ func TestSynthesize(t *testing.T) {
   "map": {
     "KEY": "c"
   },
+  "map2": {
+    "KEY": "d"
+  },
   "number": 1.5,
   "object": {
-  	"p1": "d",
+  	"p1": "e",
 	"obj": {
 		"pp1": 2
 	}
   },
-  "string": "e"
+  "string": "f"
 }
 				`,
 			},

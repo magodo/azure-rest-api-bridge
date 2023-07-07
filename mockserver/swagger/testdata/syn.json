@@ -45,6 +45,10 @@
                     "additionalProperties": {
                         "type": "string"
                     }
+                },
+                "map2": {
+                    "type": "object",
+                    "additionalProperties": true
                 }
             }
         },
