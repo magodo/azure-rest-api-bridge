@@ -19,9 +19,9 @@ type Expander struct {
 	root *Property
 
 	// variantMap maps the x-ms-discriminator-value to the model name in "/definitions".
-	// The format of the map is: {"parentModelName": {"childVariantValue": "childModelName"}}
+	// The format of the map is: {"spec path": {"parentModelName": {"childVariantValue": "childModelName"}}}
 	// This map is not initialized until the first time failed to resolve the model by the discriminator enum value.
-	variantMap map[string]map[string]string
+	variantMap map[string]map[string]map[string]string
 }
 
 // NewExpander create a expander for the schema referenced by the input json reference.
@@ -43,6 +43,7 @@ func NewExpander(ref spec.Ref) (*Expander, error) {
 			addr:        RootAddr,
 			visitedRefs: visited,
 		},
+		variantMap: map[string]map[string]map[string]string{},
 	}, nil
 }
 
@@ -283,7 +284,7 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 	}
 	prop.Variant = map[string]*Property{}
 
-	dsch, _, _, _, err := refutil.RResolve(refutil.Append(prop.ref, "properties", schema.Discriminator), prop.visitedRefs, false)
+	dsch, ref, _, _, err := refutil.RResolve(refutil.Append(prop.ref, "properties", schema.Discriminator), prop.visitedRefs, false)
 	if err != nil {
 		return fmt.Errorf("%s: recursively resolving discriminator property's(%s) schema: %v", prop.addr, schema.Discriminator, err)
 	}
@@ -294,12 +295,11 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 	// We have to analyzing the whole swagger to get all its possible variants.
 	dvals := dsch.Enum
 	if len(dvals) == 0 {
-		if e.variantMap == nil {
-			if err := e.initVariantMap(); err != nil {
-				return err
-			}
+		vm, err := e.initVariantMap(ref.GetURL().Path)
+		if err != nil {
+			return err
 		}
-		mm, ok := e.variantMap[parentName]
+		mm, ok := vm[parentName]
 		if !ok {
 			return fmt.Errorf("model named %s is not discriminator", parentName)
 		}
@@ -348,12 +348,11 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 		log.Trace("expand step", "type", "polymorphic object", "prop", addr, "ref", vref.String(), "discriminator value", dval, "warn", "failed to resolve variant schema")
 
 		// (Expensive) Use x-ms-discriminator-value as the variant model indicator
-		if e.variantMap == nil {
-			if err := e.initVariantMap(); err != nil {
-				return err
-			}
+		vm, err := e.initVariantMap(prop.ref.GetURL().Path)
+		if err != nil {
+			return err
 		}
-		mm, ok := e.variantMap[parentName]
+		mm, ok := vm[parentName]
 		if !ok {
 			return fmt.Errorf("model named %s is not discriminator", parentName)
 		}
@@ -380,10 +379,13 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 	return nil
 }
 
-func (e *Expander) initVariantMap() error {
-	doc, err := loads.Spec(e.ref.GetURL().Path)
+func (e *Expander) initVariantMap(path string) (map[string]map[string]string, error) {
+	if m := e.variantMap[path]; m != nil {
+		return m, nil
+	}
+	doc, err := loads.Spec(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	definitions := doc.Spec().Definitions
 	m := map[string]map[string]string{}
@@ -405,8 +407,8 @@ func (e *Expander) initVariantMap() error {
 			}
 		}
 	}
-	e.variantMap = m
-	return nil
+	e.variantMap[path] = m
+	return m, nil
 }
 
 func schemaTypeIsObject(schema *spec.Schema) bool {
