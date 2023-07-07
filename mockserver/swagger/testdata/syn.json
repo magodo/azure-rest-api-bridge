@@ -104,6 +104,25 @@
         "msvar1": {
             "allOf": [{"$ref": "#/definitions/msbase"}],
             "x-ms-discriminator-value": "xvar1"
+        },
+        "conflictbase": {
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["conflictvar"]
+                }
+            }
+        },
+        "conflictvar": {},
+        "realconflictvar": {
+            "allOf": [{"$ref": "#/definitions/conflictbase"}],
+            "x-ms-discriminator-value": "conflictvar",
+            "properties": {
+                "prop": {
+                    "type": "string"
+                }
+            }
         }
     }
 }

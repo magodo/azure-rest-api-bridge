@@ -225,6 +225,38 @@ func TestSynthesize(t *testing.T) {
 				`,
 			},
 		},
+		{
+			ref: specpathSyn + "#/definitions/use_base",
+			expect: []string{
+				`
+{
+	"prop": {
+		"type": "var1",
+		"prop1": "b"
+	}
+}
+				`,
+				`
+{
+	"prop": {
+		"type": "var2",
+		"prop2": "c"
+	}
+}
+				`,
+			},
+		},
+		{
+			ref: specpathSyn + "#/definitions/conflictbase",
+			expect: []string{
+				`
+{
+	"type": "conflictvar",
+	"prop": "b"
+}
+				`,
+			},
+		},
 	}
 
 	for _, tt := range cases {

@@ -292,7 +292,7 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 	parentName := prop.SchemaName()
 
 	// Some poor swagger doesn't define the discriminator property's enum values.
-	// We have to analyzing the whole swagger to get all its possible variants.
+	// We have to analyze the whole swagger to get all its possible variants.
 	dvals := dsch.Enum
 	if len(dvals) == 0 {
 		vm, err := e.initVariantMap(ref.GetURL().Path)
@@ -336,13 +336,28 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property) error {
 			if !ok {
 				continue
 			}
-			prop.Variant[dval] = &Property{
-				Schema:      psch,
-				ref:         ownRef,
-				addr:        addr,
-				visitedRefs: visited,
+			// There is possible that the variant enum value conflicts with a model who is not actually the variant, while the real variant model is defined by the x-ms-discriminator-value.
+			// E.g. The variant enum value is "Foo", and there is two models: "Foo" and "Bar". The "Foo" doesn't inherit from the base model, while the "Bar" does, and has x-ms-discriminator-value equals to "Foo".
+			// Therefore, we'll need to further verify that the model whose name is the same as variant value is indeed a variant model.
+			var isIndeedAVariant bool
+			for _, allOf := range psch.AllOf {
+				if allOf.Ref.String() != "" {
+					parent := refutil.Last(allOf.Ref.Ref)
+					if parent == prop.SchemaName() {
+						isIndeedAVariant = true
+						break
+					}
+				}
 			}
-			continue
+			if isIndeedAVariant {
+				prop.Variant[dval] = &Property{
+					Schema:      psch,
+					ref:         ownRef,
+					addr:        addr,
+					visitedRefs: visited,
+				}
+				continue
+			}
 		}
 
 		log.Trace("expand step", "type", "polymorphic object", "prop", addr, "ref", vref.String(), "discriminator value", dval, "warn", "failed to resolve variant schema")
