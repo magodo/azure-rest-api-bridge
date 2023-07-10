@@ -207,7 +207,8 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 	}
 
 	if len(candidates) > 1 {
-		return nil, fmt.Errorf("%d synth responses found with the response selector: %s", len(candidates), ov.ResponseSelector)
+		log.Warn(fmt.Sprintf("select the 1st response from %d (after selection)", len(candidates)))
+		return json.Marshal(candidates[0])
 	}
 
 	return candidates[0], nil
