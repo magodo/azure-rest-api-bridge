@@ -433,15 +433,18 @@ func (e *Expander) initVariantMap(path string) (map[string]map[string]string, er
 		}
 	}
 	for modelName, def := range definitions {
+		vname := modelName
 		if v, ok := def.Extensions["x-ms-discriminator-value"]; ok {
-			for _, allOf := range def.AllOf {
-				if allOf.Ref.String() == "" {
-					continue
-				}
-				parent := refutil.Last(allOf.Ref.Ref)
-				if mm, ok := m[parent]; ok {
-					mm[v.(string)] = modelName
-				}
+			vname = v.(string)
+		}
+
+		for _, allOf := range def.AllOf {
+			if allOf.Ref.String() == "" {
+				continue
+			}
+			parent := refutil.Last(allOf.Ref.Ref)
+			if mm, ok := m[parent]; ok {
+				mm[vname] = modelName
 			}
 		}
 	}
