@@ -11,6 +11,7 @@ type Override struct {
 	ResponseBody       string `hcl:"response_body,optional"`
 	ResponseMergePatch string `hcl:"response_merge_patch,optional"`
 	ResponseJSONPatch  string `hcl:"response_json_patch,optional"`
+	HeaderPatch        string `hcl:"header_patch,optional"`
 }
 
 type Execution struct {

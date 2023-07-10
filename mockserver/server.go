@@ -44,6 +44,7 @@ type Override struct {
 	ResponseBody       string
 	ResponseMergePatch string
 	ResponseJSONPatch  string
+	HeaderPatch        string
 }
 
 func (ovs Overrides) Match(path string) *Override {
@@ -97,11 +98,24 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 
 	ov := srv.overrides.Match(r.URL.Path)
 
-	// Override response body, just return the hardcoded response body
-	if ov != nil && ov.ResponseBody != "" {
-		log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
-		w.Write([]byte(ov.ResponseBody))
-		return
+	if ov != nil {
+		if ov.HeaderPatch != "" {
+			log.Debug("override", "type", "header", "url", r.URL.String(), "value", ov.HeaderPatch)
+			patchMap, err := ParseHeaderPatch(ov.HeaderPatch)
+			if err != nil {
+				srv.writeError(w, err)
+				return
+			}
+			for k, v := range patchMap {
+				r.Header.Set(k, v)
+			}
+		}
+		// Override response body, just return the hardcoded response body
+		if ov.ResponseBody != "" {
+			log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
+			w.Write([]byte(ov.ResponseBody))
+			return
+		}
 	}
 
 	// Otherwise, we'll synthesize the response based on its swagger definition
@@ -282,4 +296,10 @@ func (srv *Server) InitExecution(ov []Override) {
 
 func (srv *Server) Records() []swagger.JSONValue {
 	return srv.records
+}
+
+func ParseHeaderPatch(patch string) (map[string]string, error) {
+	var headerPatch map[string]string
+	err := json.Unmarshal([]byte(patch), &headerPatch)
+	return headerPatch, err
 }

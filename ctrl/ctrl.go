@@ -76,7 +76,7 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 func validateExecSpec(spec Config) error {
 	validateOverride := func(ovs []Override) error {
 		for _, ov := range ovs {
-			if ov.ResponseBody+ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch == "" {
+			if ov.HeaderPatch+ov.ResponseBody+ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch == "" {
 				return fmt.Errorf("empty override block is not allowed")
 			}
 			if ov.ResponseBody != "" {
@@ -141,6 +141,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			for _, override := range overrides {
 				ov := mockserver.Override{
 					PathPattern:        *regexp.MustCompile(override.PathPattern),
+					HeaderPatch:        override.HeaderPatch,
 					ResponseSelector:   override.ResponseSelector,
 					ResponseBody:       override.ResponseBody,
 					ResponseMergePatch: override.ResponseMergePatch,
