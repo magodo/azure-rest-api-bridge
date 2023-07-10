@@ -208,7 +208,7 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 
 	if len(candidates) > 1 {
 		log.Warn(fmt.Sprintf("select the 1st response from %d (after selection)", len(candidates)))
-		return json.Marshal(candidates[0])
+		return candidates[0], nil
 	}
 
 	return candidates[0], nil
