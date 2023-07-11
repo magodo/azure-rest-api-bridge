@@ -191,6 +191,7 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 		return json.Marshal(resps[0])
 	}
 
+	var candidates [][]byte
 	for _, resp := range resps {
 		bOld, err := json.Marshal(resp)
 		if err != nil {
@@ -205,10 +206,20 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 			return nil, err
 		}
 		if string(bOld) == string(bNew) {
-			return bOld, nil
+			candidates = append(candidates, bOld)
 		}
 	}
-	return nil, fmt.Errorf("no synth response found with the response selector: %s", ov.ResponseSelector)
+
+	if len(candidates) == 0 {
+		return nil, fmt.Errorf("no synth response found with the response selector: %s", ov.ResponseSelector)
+	}
+
+	if len(candidates) > 1 {
+		log.Warn(fmt.Sprintf("select the 1st response from %d (after selection)", len(candidates)))
+		return candidates[0], nil
+	}
+
+	return candidates[0], nil
 }
 
 func (srv *Server) handleToken(w http.ResponseWriter, r *http.Request) {

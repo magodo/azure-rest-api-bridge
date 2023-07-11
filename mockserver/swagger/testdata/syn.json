@@ -127,6 +127,55 @@
                     "type": "string"
                 }
             }
+        },
+        "L1Base": {
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "L1Var1": {
+            "allOf": [{"$ref": "#/definitions/L1Base"}],
+            "properties": {
+                "p11": {
+                    "$ref": "#/definitions/L2Base"
+                }
+            }
+        },
+        "L1Var2": {
+            "allOf": [{"$ref": "#/definitions/L1Base"}],
+            "properties": {
+                "p12": {
+                    "type": "string"
+                }
+            }
+        },
+        "L2Base": {
+            "type": "object",
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "L2Var1": {
+            "allOf": [{"$ref": "#/definitions/L2Base"}],
+            "properties": {
+                "p21": {
+                    "type": "string"
+                }
+            }
+        },
+        "L2Var2": {
+            "allOf": [{"$ref": "#/definitions/L2Base"}],
+            "properties": {
+                "p22": {
+                    "type": "string"
+                }
+            }
         }
     }
 }

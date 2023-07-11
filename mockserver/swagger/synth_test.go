@@ -144,77 +144,77 @@ func TestSynthesize(t *testing.T) {
 			ref: specpathSyn + "#/definitions/object",
 			expect: []string{
 				`
-{
-  "array": [
-    "b"
-  ],
-  "boolean": true,
-  "emptyObject": {},
-  "integer": 1,
-  "map": {
-    "KEY": "c"
-  },
-  "map2": {
-    "KEY": "d"
-  },
-  "number": 1.5,
-  "object": {
-  	"p1": "e",
-	"obj": {
-		"pp1": 2
-	}
-  },
-  "string": "f"
-}
-				`,
+		{
+		  "array": [
+		    "b"
+		  ],
+		  "boolean": true,
+		  "emptyObject": {},
+		  "integer": 1,
+		  "map": {
+		    "KEY": "c"
+		  },
+		  "map2": {
+		    "KEY": "d"
+		  },
+		  "number": 1.5,
+		  "object": {
+		  	"p1": "e",
+			"obj": {
+				"pp1": 2
+			}
+		  },
+		  "string": "f"
+		}
+						`,
 			},
 		},
 		{
 			ref: specpathSyn + "#/definitions/base",
 			expect: []string{
 				`
-{
-	"type": "var1",
-	"prop1": "b"
-}
-				`,
+		{
+			"type": "var1",
+			"prop1": "b"
+		}
+						`,
 				`
-{
-	"type": "var2",
-	"prop2": "c"
-}
-				`,
+		{
+			"type": "var2",
+			"prop2": "c"
+		}
+						`,
 			},
 		},
 		{
 			ref: specpathSyn + "#/definitions/var1",
 			expect: []string{
 				`
-{
-	"type": "var1",
-	"prop1": "b"
-}
-				`,
+		{
+			"type": "var1",
+			"prop1": "b"
+		}
+						`,
 			},
 		},
 		{
 			ref: specpathSyn + "#/definitions/msbase",
 			expect: []string{
 				`
-{
-	"type": "xvar1"
-}
-				`,
+		{
+			"type": "xvar1"
+		}
+						`,
 			},
 		},
 		{
 			ref: specpathSyn + "#/definitions/msvar1",
 			expect: []string{
 				`
-{
-	"type": "xvar1"
-}
-				`,
+		{
+			"type": "xvar1"
+		}
+						`,
 			},
 		},
 		{
@@ -222,40 +222,69 @@ func TestSynthesize(t *testing.T) {
 			opt: &SynthesizerOption{UseEnumValues: true},
 			expect: []string{
 				`
-{
-	"prop": "foo"
-}
-				`,
+		{
+			"prop": "foo"
+		}
+						`,
 			},
 		},
 		{
 			ref: specpathSyn + "#/definitions/use_base",
 			expect: []string{
 				`
-{
-	"prop": {
-		"type": "var1",
-		"prop1": "b"
-	}
-}
-				`,
+		{
+			"prop": {
+				"type": "var1",
+				"prop1": "b"
+			}
+		}
+						`,
 				`
-{
-	"prop": {
-		"type": "var2",
-		"prop2": "c"
-	}
-}
-				`,
+		{
+			"prop": {
+				"type": "var2",
+				"prop2": "c"
+			}
+		}
+						`,
 			},
 		},
 		{
 			ref: specpathSyn + "#/definitions/conflictbase",
 			expect: []string{
 				`
+		{
+			"type": "conflictvar",
+			"prop": "b"
+		}
+						`,
+			},
+		},
+		{
+			ref: specpathSyn + "#/definitions/L1Base",
+			expect: []string{
+				`
 {
-	"type": "conflictvar",
-	"prop": "b"
+	"type": "L1Var1",
+	"p11": {
+		"type": "L2Var1",
+		"p21": "b"
+	}
+}
+				`,
+				`
+{
+	"type": "L1Var1",
+	"p11": {
+		"type": "L2Var2",
+		"p22": "c"
+	}
+}
+				`,
+				`
+{
+	"type": "L1Var2",
+	"p12": "d"
 }
 				`,
 			},

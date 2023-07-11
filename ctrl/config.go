@@ -16,12 +16,14 @@ type Override struct {
 }
 
 type Execution struct {
-	Name      string            `hcl:"name,label"`
-	Overrides []Override        `hcl:"override,block"`
-	Env       map[string]string `hcl:"env,optional"`
-	Dir       string            `hcl:"dir,optional"`
-	Path      string            `hcl:"path,attr"`
-	Args      []string          `hcl:"args,optional"`
+	Name       string            `hcl:"name,label"`
+	Skip       bool              `hcl:"skip,optional"`
+	SkipReason string            `hcl:"skip_reason,optional"`
+	Overrides  []Override        `hcl:"override,block"`
+	Env        map[string]string `hcl:"env,optional"`
+	Dir        string            `hcl:"dir,optional"`
+	Path       string            `hcl:"path,attr"`
+	Args       []string          `hcl:"args,optional"`
 }
 
 type SynthOption struct {

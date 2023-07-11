@@ -99,6 +99,9 @@ func validateExecSpec(spec Config) error {
 
 	execNames := make(map[string]bool)
 	for _, exec := range spec.Executions {
+		if exec.Skip && exec.SkipReason == "" {
+			return fmt.Errorf("skipped execution %s must have a skip_reason", exec.Name)
+		}
 		if err := validateOverride(exec.Overrides); err != nil {
 			return err
 		}
@@ -127,6 +130,11 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	// Launch each execution
 	for i, execution := range ctrl.ExecSpec.Executions {
 		run := func(execution Execution) error {
+			if execution.Skip {
+				log.Info(fmt.Sprintf("Skipping %s (%d/%d): %s", execution.Name, i+1, execTotal, execution.SkipReason))
+				return nil
+			}
+
 			overrides := append([]Override{}, execution.Overrides...)
 			overrides = append(overrides, ctrl.ExecSpec.Overrides...)
 
