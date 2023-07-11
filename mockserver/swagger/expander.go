@@ -26,10 +26,14 @@ type Expander struct {
 	// Regard empty object type (no properties&allOf&additionalProperties) as of string type
 	// This is for some poorly defined Swagger that defines property as empty objects, but actually return strings (e.g. Azure data factory RP).
 	emptyObjAsStr bool
+
+	// Once specified, it will be used for expanding the property. If no hit, it will also update the cache accordingly.
+	cache *expanderCache
 }
 
 type ExpanderOption struct {
 	EmptyObjAsStr bool
+	Cache         *expanderCache
 }
 
 // NewExpander create a expander for the schema referenced by the input json reference.
@@ -57,6 +61,7 @@ func NewExpander(ref spec.Ref, opt *ExpanderOption) (*Expander, error) {
 		},
 		variantMap:    map[string]map[string]map[string]string{},
 		emptyObjAsStr: opt.EmptyObjAsStr,
+		cache:         opt.Cache,
 	}, nil
 }
 
@@ -115,6 +120,13 @@ func (e *Expander) Root() *Property {
 
 func (e *Expander) Expand() error {
 	wl := []*Property{e.root}
+
+	if e.cache != nil {
+		if e.cache.load(e) {
+			return nil
+		}
+	}
+
 	for {
 		if len(wl) == 0 {
 			break
@@ -137,6 +149,11 @@ func (e *Expander) Expand() error {
 		}
 		wl = nwl
 	}
+
+	if e.cache != nil {
+		e.cache.save(e)
+	}
+
 	return nil
 }
 
@@ -483,6 +500,16 @@ func (e *Expander) initVariantMap(path string) (map[string]map[string]string, er
 	}
 	e.variantMap[path] = m
 	return m, nil
+}
+
+func (e *Expander) cacheKey() string {
+	key := e.root.ref.String() + "|"
+	if e.emptyObjAsStr {
+		key += "1"
+	} else {
+		key += "0"
+	}
+	return key
 }
 
 func schemaTypeIsObject(schema *spec.Schema) bool {

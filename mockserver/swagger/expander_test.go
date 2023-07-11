@@ -641,6 +641,35 @@ func TestExpand(t *testing.T) {
 	}
 }
 
+func TestExpandWithCache(t *testing.T) {
+	pwd, err := os.Getwd()
+	require.NoError(t, err)
+	specpathA := filepath.Join(pwd, "testdata", "exp_a.json")
+	ref := spec.MustCreateRef(specpathA + "#/definitions/object")
+
+	// First run with no cache
+	exp1, err := NewExpander(ref, nil)
+	require.NoError(t, err)
+	require.NoError(t, exp1.Expand())
+
+	// Then run with cache
+	cache := NewExpanderCache()
+	exp2, err := NewExpander(ref, &ExpanderOption{Cache: cache})
+	require.NoError(t, err)
+	require.NoError(t, exp2.Expand())
+
+	// Two runs should be the same
+	require.Equal(t, exp1.root, exp2.root)
+
+	// Run again with the same cache
+	exp3, err := NewExpander(ref, &ExpanderOption{Cache: cache})
+	require.NoError(t, err)
+	require.NoError(t, exp3.Expand())
+
+	// Two runs should be the same
+	require.Equal(t, exp1.root, exp3.root)
+}
+
 func ptr[T any](input T) *T {
 	return &input
 }

@@ -127,6 +127,8 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	execSucceed := 0
 	execFail := 0
 
+	expCache := swagger.NewExpanderCache()
+
 	// Launch each execution
 	for i, execution := range ctrl.ExecSpec.Executions {
 		run := func(execution Execution) error {
@@ -146,15 +148,22 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 					ResponseBody:       override.ResponseBody,
 					ResponseMergePatch: override.ResponseMergePatch,
 					ResponseJSONPatch:  override.ResponseJSONPatch,
+					SynthOption:        &swagger.SynthesizerOption{},
+					ExpanderOption: &swagger.ExpanderOption{
+						Cache: expCache,
+					},
 				}
 				if opt := override.SynthOption; opt != nil {
-					ov.SynthOption = &swagger.SynthesizerOption{
-						UseEnumValues: opt.UseEnumValue,
+					if opt.UseEnumValue {
+						ov.SynthOption.UseEnumValues = true
 					}
 				}
 				if opt := override.ExpanderOption; opt != nil {
-					ov.ExpanderOption = &swagger.ExpanderOption{
-						EmptyObjAsStr: opt.EmptyObjAsStr,
+					if opt.EmptyObjAsStr {
+						ov.ExpanderOption.EmptyObjAsStr = true
+					}
+					if opt.DisableCache {
+						ov.ExpanderOption.Cache = nil
 					}
 				}
 

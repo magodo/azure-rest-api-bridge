@@ -266,8 +266,8 @@ func (srv *Server) Start() error {
 	mux.HandleFunc("/", srv.Handle)
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", srv.Addr, srv.Port),
-		ReadTimeout:  100 * time.Second,
-		WriteTimeout: 100 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
 		Handler:      mux,
 	}
 	shutdownCh := make(chan struct{})

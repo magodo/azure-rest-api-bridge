@@ -138,8 +138,9 @@ The `expander` block is defined below:
 
 ```hcl
 expander {
-    empty_obj_as_str = <bool>   # Wehter to change the schema that is of type "object", but has no other attributes (i.e. properties, additionalProperties, allOf), to be a schema of type "string"?
+    empty_obj_as_str = false    # Whether to change the schema that is of type "object", but has no other attributes (i.e. properties, additionalProperties, allOf), to be a schema of type "string"?
                                 # This is to adpot for poor APIs (e.g. Azure data factory RP) that defines properties as of type `object`, but the API actually returns "string".
+    disable_cache    = false    # Whether to disable caching? By default, caching is enabled.
 }
 ```
 
@@ -149,7 +150,7 @@ The `synthesizer` block is defined below:
 
 ```hcl
 synthesizer {
-    use_enum_value = <bool>     # Whether to use the defined enum values (pick up the first one)  when synthesizing the response value for the enum properties?
+    use_enum_value = false      # Whether to use the defined enum values (pick up the first one)  when synthesizing the response value for the enum properties?
 }
 ```
 

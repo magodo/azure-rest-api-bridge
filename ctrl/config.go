@@ -32,4 +32,5 @@ type SynthOption struct {
 
 type ExpanderOption struct {
 	EmptyObjAsStr bool `hcl:"empty_obj_as_str,optional"`
+	DisableCache  bool `hcl:"disable_cache,optional"`
 }
