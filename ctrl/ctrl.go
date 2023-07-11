@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/magodo/azure-rest-api-bridge/log"
 	"github.com/magodo/azure-rest-api-bridge/mockserver"
+	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
 	"github.com/zclconf/go-cty/cty/function/stdlib"
@@ -76,11 +77,11 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 func validateExecSpec(spec Config) error {
 	validateOverride := func(ovs []Override) error {
 		for _, ov := range ovs {
-			if ov.ResponseBody+ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch == "" {
+			if ov.ResponseBody+ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch == "" && ov.ExpanderOption == nil && ov.SynthOption == nil {
 				return fmt.Errorf("empty override block is not allowed")
 			}
 			if ov.ResponseBody != "" {
-				if ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch != "" {
+				if ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch != "" || ov.ExpanderOption != nil || ov.SynthOption != nil {
 					return fmt.Errorf("`response_body` can only be exclusive specified")
 				}
 				continue
@@ -138,6 +139,17 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 					ResponseMergePatch: override.ResponseMergePatch,
 					ResponseJSONPatch:  override.ResponseJSONPatch,
 				}
+				if opt := override.SynthOption; opt != nil {
+					ov.SynthOption = &swagger.SynthesizerOption{
+						UseEnumValues: opt.UseEnumValue,
+					}
+				}
+				if opt := override.ExpanderOption; opt != nil {
+					ov.ExpanderOption = &swagger.ExpanderOption{
+						EmptyObjAsStr: opt.EmptyObjAsStr,
+					}
+				}
+
 				ovs = append(ovs, ov)
 			}
 

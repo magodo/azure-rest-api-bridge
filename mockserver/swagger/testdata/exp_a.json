@@ -168,6 +168,18 @@
                     "$ref": "./exp_b.json#/definitions/BBase"
                 }
             }
+        },
+        "empty": {
+            "properties" : {
+                "emptyObject": {
+                    "type": "object"
+                },
+                "emptyKey": {
+                    "additionalProperties": {
+                        "key": "object"
+                    }
+                }
+            }
         }
     }
 }

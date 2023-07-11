@@ -362,7 +362,7 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.ref, func(t *testing.T) {
 			ref := spec.MustCreateRef(tt.ref)
-			exp, err := NewExpander(ref)
+			exp, err := NewExpander(ref, nil)
 			require.NoError(t, err)
 			require.NoError(t, exp.Expand())
 			v, err := UnmarshalJSONToJSONValue([]byte(tt.input), exp.root)

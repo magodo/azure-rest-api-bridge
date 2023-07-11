@@ -22,11 +22,23 @@ type Expander struct {
 	// The format of the map is: {"spec path": {"parentModelName": {"childVariantValue": "childModelName"}}}
 	// This map is not initialized until the first time failed to resolve the model by the discriminator enum value.
 	variantMap map[string]map[string]map[string]string
+
+	// Regard empty object type (no properties&allOf&additionalProperties) as of string type
+	// This is for some poorly defined Swagger that defines property as empty objects, but actually return strings (e.g. Azure data factory RP).
+	emptyObjAsStr bool
+}
+
+type ExpanderOption struct {
+	EmptyObjAsStr bool
 }
 
 // NewExpander create a expander for the schema referenced by the input json reference.
 // The reference must be a normalized reference.
-func NewExpander(ref spec.Ref) (*Expander, error) {
+func NewExpander(ref spec.Ref, opt *ExpanderOption) (*Expander, error) {
+	if opt == nil {
+		opt = &ExpanderOption{}
+	}
+
 	psch, ownRef, visited, ok, err := refutil.RResolve(ref, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("recursively resolve schema %s: %v", &ref, err)
@@ -43,13 +55,14 @@ func NewExpander(ref spec.Ref) (*Expander, error) {
 			addr:        RootAddr,
 			visitedRefs: visited,
 		},
-		variantMap: map[string]map[string]map[string]string{},
+		variantMap:    map[string]map[string]map[string]string{},
+		emptyObjAsStr: opt.EmptyObjAsStr,
 	}, nil
 }
 
 // NewExpanderFromOpRef create a expander for the successful response schema of an operation referenced by the input json reference.
 // The reference must be a normalized reference to the operation.
-func NewExpanderFromOpRef(ref spec.Ref) (*Expander, error) {
+func NewExpanderFromOpRef(ref spec.Ref, opt *ExpanderOption) (*Expander, error) {
 	if !ref.HasFullFilePath {
 		return nil, fmt.Errorf("reference %s is not normalized", &ref)
 	}
@@ -93,7 +106,7 @@ func NewExpanderFromOpRef(ref spec.Ref) (*Expander, error) {
 		return nil, fmt.Errorf("circular ref found when resolving response ref %s", &respref)
 	}
 
-	return NewExpander(refutil.Append(respref, "schema"))
+	return NewExpander(refutil.Append(respref, "schema"), opt)
 }
 
 func (e *Expander) Root() *Property {
@@ -221,6 +234,16 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 	if !ok {
 		return nil
 	}
+
+	if SchemaIsEmptyObject(schema) && e.emptyObjAsStr {
+		//schema.Type = []string{"string"}
+		schema = &spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"string"},
+			},
+		}
+	}
+
 	prop.Element = &Property{
 		Schema:      schema,
 		ref:         ownRef,
@@ -235,6 +258,16 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 
 	if !SchemaIsObject(schema) {
 		return fmt.Errorf("%s: is not object", prop.addr)
+	}
+
+	if SchemaIsEmptyObject(schema) && e.emptyObjAsStr {
+		//schema.Type = []string{"string"}
+		*schema = spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"string"},
+			},
+		}
+		return nil
 	}
 
 	prop.Children = map[string]*Property{}
@@ -463,4 +496,8 @@ func SchemaIsObject(schema *spec.Schema) bool {
 
 func SchemaIsMap(schema *spec.Schema) bool {
 	return schemaTypeIsObject(schema) && len(schema.Properties) == 0 && schema.AdditionalProperties != nil
+}
+
+func SchemaIsEmptyObject(schema *spec.Schema) bool {
+	return SchemaIsObject(schema) && len(schema.Properties) == 0 && len(schema.AllOf) == 0
 }

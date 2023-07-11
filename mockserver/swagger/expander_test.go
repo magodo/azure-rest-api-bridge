@@ -21,6 +21,7 @@ func TestExpand(t *testing.T) {
 		name       string
 		ref        string
 		otherspecs []string
+		opt        *ExpanderOption
 		verify     func(*testing.T, *Property, ...*spec.Swagger)
 	}{
 		{
@@ -567,12 +568,63 @@ func TestExpand(t *testing.T) {
 				require.Equal(t, expect, root)
 			},
 		},
+		{
+			name: "empty object regard as string",
+			ref:  specpathA + "#/definitions/empty",
+			opt:  &ExpanderOption{EmptyObjAsStr: true},
+			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
+				swg := swgs[0]
+				expect := &Property{
+					Schema: ptr(swg.Definitions["empty"]),
+					addr:   RootAddr,
+					visitedRefs: map[string]bool{
+						specpathA + "#/definitions/empty": true,
+					},
+					ref: spec.MustCreateRef(specpathA + "#/definitions/empty"),
+					Children: map[string]*Property{
+						"emptyObject": {
+							Schema: &spec.Schema{
+								SchemaProps: spec.SchemaProps{
+									Type: []string{"string"},
+								},
+							},
+							addr: ParseAddr("emptyObject"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/empty": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/empty/properties/emptyObject"),
+						},
+						"emptyKey": {
+							Schema: ptr(swg.Definitions["empty"].Properties["emptyKey"]),
+							addr:   ParseAddr("emptyKey"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/empty": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/empty/properties/emptyKey"),
+							Element: &Property{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type: []string{"string"},
+									},
+								},
+								addr: ParseAddr("emptyKey.*"),
+								visitedRefs: map[string]bool{
+									specpathA + "#/definitions/empty": true,
+								},
+								ref: spec.MustCreateRef(specpathA + "#/definitions/empty/properties/emptyKey/additionalProperties"),
+							},
+						},
+					},
+				}
+				require.Equal(t, expect, root)
+			},
+		},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			ref := spec.MustCreateRef(tt.ref)
-			exp, err := NewExpander(ref)
+			exp, err := NewExpander(ref, tt.opt)
 			require.NoError(t, err)
 			require.NoError(t, exp.Expand())
 			doc, err := loads.Spec(ref.GetURL().Path)

@@ -26,9 +26,8 @@ type Server struct {
 	server     *http.Server
 	shutdownCh <-chan struct{}
 
-	Idx      azidx.Index
-	Specdir  string
-	synthOpt *swagger.SynthesizerOption
+	Idx     azidx.Index
+	Specdir string
 
 	// Followings are execution-based
 	rnd       swagger.Rnd
@@ -44,6 +43,8 @@ type Override struct {
 	ResponseBody       string
 	ResponseMergePatch string
 	ResponseJSONPatch  string
+	SynthOption        *swagger.SynthesizerOption
+	ExpanderOption     *swagger.ExpanderOption
 }
 
 func (ovs Overrides) Match(path string) *Override {
@@ -57,11 +58,10 @@ func (ovs Overrides) Match(path string) *Override {
 }
 
 type Option struct {
-	Addr     string
-	Port     int
-	Index    string
-	SpecDir  string
-	SynthOpt *swagger.SynthesizerOption
+	Addr    string
+	Port    int
+	Index   string
+	SpecDir string
 }
 
 // New creates a new (uninitialized) mockserver, which can be started, but needs to be initiated in order to work as expected.
@@ -75,11 +75,10 @@ func New(opt Option) (*Server, error) {
 		return nil, fmt.Errorf("unmarshal index file: %v", err)
 	}
 	return &Server{
-		Addr:     opt.Addr,
-		Port:     opt.Port,
-		Idx:      index,
-		Specdir:  opt.SpecDir,
-		synthOpt: opt.SynthOpt,
+		Addr:    opt.Addr,
+		Port:    opt.Port,
+		Idx:     index,
+		Specdir: opt.SpecDir,
 	}, nil
 }
 
@@ -105,7 +104,16 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Otherwise, we'll synthesize the response based on its swagger definition
-	resps, expRoot, err := srv.synthResponse(r)
+	var (
+		synthOpt    *swagger.SynthesizerOption
+		expanderOpt *swagger.ExpanderOption
+	)
+	if ov != nil {
+		synthOpt = ov.SynthOption
+		expanderOpt = ov.ExpanderOption
+	}
+
+	resps, expRoot, err := srv.synthResponse(r, synthOpt, expanderOpt)
 	if err != nil {
 		srv.writeError(w, err)
 		return
@@ -154,19 +162,19 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (srv *Server) synthResponse(r *http.Request) ([]interface{}, *swagger.Property, error) {
+func (srv *Server) synthResponse(r *http.Request, synthOpt *swagger.SynthesizerOption, expanderOpt *swagger.ExpanderOption) ([]interface{}, *swagger.Property, error) {
 	ref, err := srv.Idx.Lookup(r.Method, *r.URL)
 	if err != nil {
 		return nil, nil, err
 	}
-	exp, err := swagger.NewExpanderFromOpRef(spec.MustCreateRef(filepath.Join(srv.Specdir, ref.GetURL().Path) + "#" + ref.GetPointer().String()))
+	exp, err := swagger.NewExpanderFromOpRef(spec.MustCreateRef(filepath.Join(srv.Specdir, ref.GetURL().Path)+"#"+ref.GetPointer().String()), expanderOpt)
 	if err != nil {
 		return nil, nil, err
 	}
 	if err := exp.Expand(); err != nil {
 		return nil, nil, err
 	}
-	syn := swagger.NewSynthesizer(exp.Root(), &srv.rnd, srv.synthOpt)
+	syn := swagger.NewSynthesizer(exp.Root(), &srv.rnd, synthOpt)
 	return syn.Synthesize(), exp.Root(), nil
 }
 
@@ -247,8 +255,8 @@ func (srv *Server) Start() error {
 	mux.HandleFunc("/", srv.Handle)
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", srv.Addr, srv.Port),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  100 * time.Second,
+		WriteTimeout: 100 * time.Second,
 		Handler:      mux,
 	}
 	shutdownCh := make(chan struct{})
