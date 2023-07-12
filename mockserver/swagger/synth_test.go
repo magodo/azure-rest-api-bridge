@@ -191,7 +191,7 @@ func TestSynthesize(t *testing.T) {
 			expect: []string{
 				`
 		{
-			"type": "var1",
+			"type": "c",
 			"prop1": "b"
 		}
 						`,
@@ -212,7 +212,7 @@ func TestSynthesize(t *testing.T) {
 			expect: []string{
 				`
 		{
-			"type": "xvar1"
+			"type": "b"
 		}
 						`,
 			},

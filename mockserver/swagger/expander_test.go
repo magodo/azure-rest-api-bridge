@@ -220,10 +220,8 @@ func TestExpand(t *testing.T) {
 									},
 									ref: spec.MustCreateRef(specpathA + "#/definitions/Dog/properties/cat_friends"),
 									Element: &Property{
-										Schema:             ptr(swg.Definitions["Cat"]),
-										Discriminator:      "type",
-										DiscriminatorValue: "Cat",
-										addr:               ParseAddr("{Dog}.cat_friends.*"),
+										Schema: ptr(swg.Definitions["Cat"]),
+										addr:   ParseAddr("{Dog}.cat_friends.*"),
 										visitedRefs: map[string]bool{
 											specpathA + "#/definitions/Cat": true,
 											specpathA + "#/definitions/Dog": true,
@@ -300,10 +298,8 @@ func TestExpand(t *testing.T) {
 									},
 									ref: spec.MustCreateRef(specpathA + "#/definitions/Cat/properties/dog_friends"),
 									Element: &Property{
-										Schema:             ptr(swg.Definitions["Dog"]),
-										Discriminator:      "type",
-										DiscriminatorValue: "Dog",
-										addr:               ParseAddr("{Cat}.dog_friends.*"),
+										Schema: ptr(swg.Definitions["Dog"]),
+										addr:   ParseAddr("{Cat}.dog_friends.*"),
 										visitedRefs: map[string]bool{
 											specpathA + "#/definitions/Cat": true,
 											specpathA + "#/definitions/Dog": true,
@@ -355,10 +351,8 @@ func TestExpand(t *testing.T) {
 			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
 				swg := swgs[0]
 				expect := &Property{
-					Schema:             ptr(swg.Definitions["Dog"]),
-					Discriminator:      "type",
-					DiscriminatorValue: "Dog",
-					addr:               RootAddr,
+					Schema: ptr(swg.Definitions["Dog"]),
+					addr:   RootAddr,
 					visitedRefs: map[string]bool{
 						specpathA + "#/definitions/Dog": true,
 					},
@@ -390,10 +384,8 @@ func TestExpand(t *testing.T) {
 							},
 							ref: spec.MustCreateRef(specpathA + "#/definitions/Dog/properties/cat_friends"),
 							Element: &Property{
-								Schema:             ptr(swg.Definitions["Cat"]),
-								Discriminator:      "type",
-								DiscriminatorValue: "Cat",
-								addr:               ParseAddr("cat_friends.*"),
+								Schema: ptr(swg.Definitions["Cat"]),
+								addr:   ParseAddr("cat_friends.*"),
 								visitedRefs: map[string]bool{
 									specpathA + "#/definitions/Cat": true,
 									specpathA + "#/definitions/Dog": true,
