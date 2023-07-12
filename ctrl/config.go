@@ -27,10 +27,16 @@ type Execution struct {
 }
 
 type SynthOption struct {
-	UseEnumValue bool `hcl:"use_enum_value,optional"`
+	UseEnumValue     bool               `hcl:"use_enum_value,optional"`
+	DuplicateElement []DuplicateElement `hcl:"duplicate_element,block"`
 }
 
 type ExpanderOption struct {
 	EmptyObjAsStr bool `hcl:"empty_obj_as_str,optional"`
 	DisableCache  bool `hcl:"disable_cache,optional"`
+}
+
+type DuplicateElement struct {
+	Count *int   `hcl:"count,optional"`
+	Addr  string `hcl:"addr,attr"`
 }

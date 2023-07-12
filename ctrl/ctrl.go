@@ -157,6 +157,18 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 					if opt.UseEnumValue {
 						ov.SynthOption.UseEnumValues = true
 					}
+					var del []swagger.SynthDuplicateElement
+					for _, eopt := range opt.DuplicateElement {
+						cnt := 1
+						if eopt.Count != nil {
+							cnt = *eopt.Count
+						}
+						del = append(del, swagger.SynthDuplicateElement{
+							Cnt:  cnt,
+							Addr: swagger.ParseAddr(eopt.Addr),
+						})
+					}
+					ov.SynthOption.DuplicateElements = del
 				}
 				if opt := override.ExpanderOption; opt != nil {
 					if opt.EmptyObjAsStr {

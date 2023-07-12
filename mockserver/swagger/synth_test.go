@@ -136,12 +136,14 @@ func TestSynthesize(t *testing.T) {
 	specpathSyn := filepath.Join(pwd, "testdata", "syn.json")
 
 	cases := []struct {
+		name   string
 		ref    string
 		opt    *SynthesizerOption
 		expect []string
 	}{
 		{
-			ref: specpathSyn + "#/definitions/object",
+			name: specpathSyn + "#/definitions/object",
+			ref:  specpathSyn + "#/definitions/object",
 			expect: []string{
 				`
 		{
@@ -170,7 +172,53 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathSyn + "#/definitions/base",
+			name: specpathSyn + "#/definitions/object (duplicate)",
+			ref:  specpathSyn + "#/definitions/object",
+			opt: &SynthesizerOption{
+				DuplicateElements: []SynthDuplicateElement{
+					{
+						Cnt:  1,
+						Addr: ParseAddr("array"),
+					},
+					{
+						Cnt:  2,
+						Addr: ParseAddr("map"),
+					},
+				},
+			},
+			expect: []string{
+				`
+		{
+		  "array": [
+		    "b",
+			"c"
+		  ],
+		  "boolean": true,
+		  "emptyObject": {},
+		  "integer": 1,
+		  "map": {
+		    "KEY": "d",
+		    "KEY1": "e",
+		    "KEY2": "f"
+		  },
+		  "map2": {
+		    "KEY": "g"
+		  },
+		  "number": 1.5,
+		  "object": {
+		  	"p1": "h",
+			"obj": {
+				"pp1": 2
+			}
+		  },
+		  "string": "i"
+		}
+						`,
+			},
+		},
+		{
+			name: specpathSyn + "#/definitions/base",
+			ref:  specpathSyn + "#/definitions/base",
 			expect: []string{
 				`
 		{
@@ -187,7 +235,8 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathSyn + "#/definitions/var1",
+			name: specpathSyn + "#/definitions/var1",
+			ref:  specpathSyn + "#/definitions/var1",
 			expect: []string{
 				`
 		{
@@ -198,7 +247,8 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathSyn + "#/definitions/msbase",
+			name: specpathSyn + "#/definitions/msbase",
+			ref:  specpathSyn + "#/definitions/msbase",
 			expect: []string{
 				`
 		{
@@ -208,7 +258,8 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathSyn + "#/definitions/msvar1",
+			name: specpathSyn + "#/definitions/msvar1",
+			ref:  specpathSyn + "#/definitions/msvar1",
 			expect: []string{
 				`
 		{
@@ -218,8 +269,9 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathSyn + "#/definitions/enumobject",
-			opt: &SynthesizerOption{UseEnumValues: true},
+			name: specpathSyn + "#/definitions/enumobject",
+			ref:  specpathSyn + "#/definitions/enumobject",
+			opt:  &SynthesizerOption{UseEnumValues: true},
 			expect: []string{
 				`
 		{
@@ -229,7 +281,8 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathSyn + "#/definitions/use_base",
+			name: specpathSyn + "#/definitions/use_base",
+			ref:  specpathSyn + "#/definitions/use_base",
 			expect: []string{
 				`
 		{
@@ -250,7 +303,8 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathSyn + "#/definitions/conflictbase",
+			name: specpathSyn + "#/definitions/conflictbase",
+			ref:  specpathSyn + "#/definitions/conflictbase",
 			expect: []string{
 				`
 		{
@@ -261,7 +315,8 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
-			ref: specpathSyn + "#/definitions/L1Base",
+			name: specpathSyn + "#/definitions/L1Base",
+			ref:  specpathSyn + "#/definitions/L1Base",
 			expect: []string{
 				`
 {
@@ -292,7 +347,7 @@ func TestSynthesize(t *testing.T) {
 	}
 
 	for _, tt := range cases {
-		t.Run(tt.ref, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			ref := spec.MustCreateRef(tt.ref)
 			exp, err := NewExpander(ref, nil)
 			require.NoError(t, err)

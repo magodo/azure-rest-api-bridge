@@ -151,6 +151,19 @@ The `synthesizer` block is defined below:
 ```hcl
 synthesizer {
     use_enum_value = false      # Whether to use the defined enum values (pick up the first one)  when synthesizing the response value for the enum properties?
+
+    duplicate_element {...}     # 0 or more `duplicate_element` block that is used to duplicate key/map elements (otherwise, only one element is synthesized).
+}
+```
+
+---
+
+Each `duplicate_element` block is defined below:
+
+```hcl
+duplicate_element {
+    count = 1       # (Optional) The count of duplications. By default, 1.
+    addr  = "..."   # The address to the property to duplicate, see `PropertyAddr` for the correct format
 }
 ```
 

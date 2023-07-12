@@ -9,21 +9,33 @@ type Synthesizer struct {
 	root *Property
 	rnd  *Rnd
 
-	useEnumValues bool
+	useEnumValues     bool
+	duplicateElements map[string]int
 }
 
 type SynthesizerOption struct {
-	UseEnumValues bool
+	UseEnumValues     bool
+	DuplicateElements []SynthDuplicateElement
+}
+
+type SynthDuplicateElement struct {
+	Cnt  int
+	Addr PropertyAddr
 }
 
 func NewSynthesizer(root *Property, rnd *Rnd, opt *SynthesizerOption) Synthesizer {
 	if opt == nil {
 		opt = &SynthesizerOption{}
 	}
+	dem := map[string]int{}
+	for _, de := range opt.DuplicateElements {
+		dem[de.Addr.String()] = de.Cnt
+	}
 	return Synthesizer{
-		root:          root,
-		rnd:           rnd,
-		useEnumValues: opt.UseEnumValues,
+		root:              root,
+		rnd:               rnd,
+		useEnumValues:     opt.UseEnumValues,
+		duplicateElements: dem,
 	}
 }
 
@@ -33,16 +45,40 @@ func (syn *Synthesizer) Synthesize() []interface{} {
 		var result []interface{}
 		switch {
 		case p.Element != nil:
-			inners := synProp(p, p.Element)
-			for _, inner := range inners {
-				var res interface{}
-				if SchemaIsArray(p.Schema) {
-					res = []interface{}{inner}
-				} else {
-					// map
-					res = map[string]interface{}{"KEY": inner}
+			n := 1
+			if cnt, ok := syn.duplicateElements[p.addr.String()]; ok {
+				n += cnt
+			}
+
+			var innerMatrix [][]interface{}
+			for i := 0; i < n; i++ {
+				inners := synProp(p, p.Element)
+				innerMatrix = append(innerMatrix, inners)
+			}
+
+			if SchemaIsArray(p.Schema) {
+				for i := 0; i < len(innerMatrix[0]); i++ {
+					var res []interface{}
+					for j := 0; j < n; j++ {
+						inner := innerMatrix[j][i]
+						res = append(res, inner)
+					}
+					result = append(result, res)
 				}
-				result = append(result, res)
+			} else {
+				// map
+				for i := 0; i < len(innerMatrix[0]); i++ {
+					res := map[string]interface{}{}
+					for j := 0; j < n; j++ {
+						key := "KEY"
+						if j != 0 {
+							key = fmt.Sprintf("KEY%d", j)
+						}
+						inner := innerMatrix[j][i]
+						res[key] = inner
+					}
+					result = append(result, res)
+				}
 			}
 		case p.Children != nil:
 			m := map[string][]interface{}{}
