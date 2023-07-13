@@ -142,7 +142,17 @@ func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
 		// In case the property is polymorphic, get the variant based on the input json value
 		if prop != nil && len(prop.Variant) != 0 {
 			v := v.(map[string]interface{})
-			prop = prop.Variant[v[prop.Schema.Discriminator].(string)]
+			var randomVariant *Property
+			for _, v := range prop.Variant {
+				randomVariant = v
+				break
+			}
+			discriminator := randomVariant.Discriminator
+			dvalue, ok := v[discriminator].(string)
+			if !ok {
+				return nil, fmt.Errorf("value of the discriminator %q is not a string in JSON %v, got=%T", discriminator, v, v[discriminator])
+			}
+			prop = prop.Variant[dvalue]
 		}
 
 		var pos *JSONValuePos

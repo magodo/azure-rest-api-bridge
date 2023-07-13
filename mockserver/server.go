@@ -153,7 +153,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 
 	v, err := swagger.UnmarshalJSONToJSONValue(b, expRoot)
 	if err != nil {
-		srv.writeError(w, err)
+		srv.writeError(w, fmt.Errorf("unmarshal JSON to JSONValue: %v", err))
 		return
 	}
 	srv.records = append(srv.records, v)

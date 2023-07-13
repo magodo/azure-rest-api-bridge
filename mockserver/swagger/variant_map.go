@@ -6,19 +6,26 @@ import (
 )
 
 // VariantMap maps the x-ms-discriminator-value to the model name in "/definitions".
-// The format of the map is: {"parentModelName": {"childVariantValue": "childModelName"}}
 // Note that the variant map is the plain translation of the swagger inheritance strucutre, it doesn't take
 // cascaded variants into consideration. So always ensure use `Get()` to get the complete variant set of a model.
-type VariantMap map[string]map[string]string
+type VariantMap map[string]VariantInfo
 
-func (m VariantMap) Get(modelName string) (map[string]string, bool) {
+type VariantInfo struct {
+	Discriminator       string
+	VariantValueToModel map[string]string
+}
+
+func (m VariantMap) Get(modelName string) (*VariantInfo, bool) {
 	if _, ok := m[modelName]; !ok {
 		return nil, false
 	}
 	wl := []string{}
-	out := map[string]string{}
-	for vValue, vName := range m[modelName] {
-		out[vValue] = vName
+	out := &VariantInfo{
+		Discriminator:       m[modelName].Discriminator,
+		VariantValueToModel: map[string]string{},
+	}
+	for vValue, vName := range m[modelName].VariantValueToModel {
+		out.VariantValueToModel[vValue] = vName
 		wl = append(wl, vName)
 	}
 	for {
@@ -33,8 +40,8 @@ func (m VariantMap) Get(modelName string) (map[string]string, bool) {
 			if !ok {
 				continue
 			}
-			for vValue, vName := range mm {
-				out[vValue] = vName
+			for vValue, vName := range mm.VariantValueToModel {
+				out.VariantValueToModel[vValue] = vName
 				wl = append(wl, vName)
 			}
 		}
@@ -51,7 +58,10 @@ func NewVariantMap(path string) (VariantMap, error) {
 	m := VariantMap{}
 	for modelName, def := range definitions {
 		if def.Discriminator != "" {
-			m[modelName] = map[string]string{}
+			m[modelName] = VariantInfo{
+				Discriminator:       def.Discriminator,
+				VariantValueToModel: map[string]string{},
+			}
 		}
 	}
 
@@ -67,8 +77,11 @@ func NewVariantMap(path string) (VariantMap, error) {
 					continue
 				}
 				parent := refutil.Last(allOf.Ref.Ref)
-				if _, ok := m[parent]; ok {
-					m[modelName] = map[string]string{}
+				if parentVariantInfo, ok := m[parent]; ok {
+					m[modelName] = VariantInfo{
+						Discriminator:       parentVariantInfo.Discriminator,
+						VariantValueToModel: map[string]string{},
+					}
 					toContinue = true
 				}
 			}
@@ -86,8 +99,8 @@ func NewVariantMap(path string) (VariantMap, error) {
 				continue
 			}
 			parent := refutil.Last(allOf.Ref.Ref)
-			if mm, ok := m[parent]; ok {
-				mm[vname] = modelName
+			if varInfo, ok := m[parent]; ok {
+				varInfo.VariantValueToModel[vname] = modelName
 			}
 		}
 	}

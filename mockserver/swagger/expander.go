@@ -284,15 +284,15 @@ func (e *Expander) expandPropAsObject(prop *Property) error {
 	if err != nil {
 		return err
 	}
-	mm, ok := vm.Get(prop.SchemaName())
-	if !ok || len(mm) == 0 {
+	varInfo, ok := vm.Get(prop.SchemaName())
+	if !ok || len(varInfo.VariantValueToModel) == 0 {
 		// A regualr object (inlcuding leaf polymorphic model)
 		log.Trace("expand step", "type", "regular object", "prop", prop.addr.String(), "ref", prop.ref.String())
 		return e.expandPropAsRegularObject(prop)
 	} else {
 		// A non-leaf polymorphic model
 		log.Trace("expand step", "type", "polymorphic object", "prop", prop.addr.String(), "ref", prop.ref.String())
-		return e.expandPropAsPolymorphicObject(prop, mm)
+		return e.expandPropAsPolymorphicObject(prop, *varInfo)
 	}
 }
 
@@ -367,13 +367,13 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 	return nil
 }
 
-func (e *Expander) expandPropAsPolymorphicObject(prop *Property, dvals map[string]string) error {
+func (e *Expander) expandPropAsPolymorphicObject(prop *Property, varInfo VariantInfo) error {
 	schema := prop.Schema
 	if !SchemaIsObject(schema) {
 		return fmt.Errorf("%s: is not object", prop.addr)
 	}
 	prop.Variant = map[string]*Property{}
-	for vValue, vName := range dvals {
+	for vValue, vName := range varInfo.VariantValueToModel {
 		addr := append(PropertyAddr{}, prop.addr...)
 		addr = append(addr, PropertyAddrStep{
 			Type:  PropertyAddrStepTypeVariant,
@@ -401,7 +401,7 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property, dvals map[strin
 			ref:                ownRef,
 			addr:               addr,
 			visitedRefs:        visited,
-			Discriminator:      schema.Discriminator,
+			Discriminator:      varInfo.Discriminator,
 			DiscriminatorValue: vValue,
 		}
 
