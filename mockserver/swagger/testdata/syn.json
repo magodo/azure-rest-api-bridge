@@ -176,6 +176,31 @@
                     "type": "string"
                 }
             }
+        },
+        "XBase": {
+            "type": "object",
+            "discriminator": "type",
+            "properties": {
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "XVar1": {
+            "type": "object",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/XBase"
+                }
+            ]
+        },
+        "XVar2": {
+            "type": "object",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/XVar1"
+                }
+            ]
         }
     }
 }

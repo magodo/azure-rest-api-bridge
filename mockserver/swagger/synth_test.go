@@ -344,6 +344,22 @@ func TestSynthesize(t *testing.T) {
 				`,
 			},
 		},
+		{
+			name: specpathSyn + "#/definitions/XBase",
+			ref:  specpathSyn + "#/definitions/XBase",
+			expect: []string{
+				`
+{
+  "type": "XVar1"
+}
+			`,
+				`
+{
+  "type": "XVar2"
+}
+			`,
+			},
+		},
 	}
 
 	for _, tt := range cases {

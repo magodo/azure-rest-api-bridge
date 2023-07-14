@@ -279,14 +279,19 @@ func (e *Expander) expandPropAsObject(prop *Property) error {
 		return nil
 	}
 
-	// Figure out whether this is a regular object (including leaf variant model) or a polymorphic object
+	// Figure out whether this is a regular object or a polymorphic object
+	// A regular object can be one of:
+	// - Non polymorphic model
+	// - Leaf polymorphic model
+	// Especially, if the current property is expanded as a variant, we will always expand it as a regular object, no matter that variant model is still a polymorphic object.
+	// Since we will expand all of its (cascaded) variants at its parent level.
 	vm, err := e.initVariantMap(prop.ref.GetURL().Path)
 	if err != nil {
 		return err
 	}
 	varInfo, ok := vm.Get(prop.SchemaName())
-	if !ok || len(varInfo.VariantValueToModel) == 0 {
-		// A regualr object (inlcuding leaf polymorphic model)
+	if !ok || len(varInfo.VariantValueToModel) == 0 || prop.Discriminator != "" {
+		// A regualr object
 		log.Trace("expand step", "type", "regular object", "prop", prop.addr.String(), "ref", prop.ref.String())
 		return e.expandPropAsRegularObject(prop)
 	} else {
@@ -355,7 +360,7 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 				visitedRefs: visited,
 			},
 		}
-		// The base schema of a variant schema is always a regular object.
+		// The base schema of a variant schema is always regarded as a regular object.
 		if err := tmpExp.expandPropAsRegularObject(tmpExp.root); err != nil {
 			return fmt.Errorf("%s: expanding the %d-th (temporary) allOf schema: %v", prop.addr, i, err)
 		}

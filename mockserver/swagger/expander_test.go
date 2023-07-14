@@ -611,6 +611,68 @@ func TestExpand(t *testing.T) {
 				require.Equal(t, expect, root)
 			},
 		},
+		{
+			name: "cascaded inheritance",
+			ref:  specpathA + "#/definitions/XBase",
+			opt:  &ExpanderOption{EmptyObjAsStr: true},
+			verify: func(t *testing.T, root *Property, swgs ...*spec.Swagger) {
+				swg := swgs[0]
+				expect := &Property{
+					Schema: ptr(swg.Definitions["XBase"]),
+					addr:   RootAddr,
+					visitedRefs: map[string]bool{
+						specpathA + "#/definitions/XBase": true,
+					},
+					ref: spec.MustCreateRef(specpathA + "#/definitions/XBase"),
+					Variant: map[string]*Property{
+						"XVar1": {
+							Discriminator:      "type",
+							DiscriminatorValue: "XVar1",
+							Schema:             ptr(swg.Definitions["XVar1"]),
+							addr:               ParseAddr("{XVar1}"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/XVar1": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/XVar1"),
+							Children: map[string]*Property{
+								"type": {
+									Schema: ptr(swg.Definitions["XBase"].Properties["type"]),
+									addr:   ParseAddr("{XVar1}.type"),
+									visitedRefs: map[string]bool{
+										specpathA + "#/definitions/XVar1": true,
+										specpathA + "#/definitions/XBase": true,
+									},
+									ref: spec.MustCreateRef(specpathA + "#/definitions/XBase/properties/type"),
+								},
+							},
+						},
+						"XVar2": {
+							Discriminator:      "type",
+							DiscriminatorValue: "XVar2",
+							Schema:             ptr(swg.Definitions["XVar2"]),
+							addr:               ParseAddr("{XVar2}"),
+							visitedRefs: map[string]bool{
+								specpathA + "#/definitions/XVar2": true,
+							},
+							ref: spec.MustCreateRef(specpathA + "#/definitions/XVar2"),
+							Children: map[string]*Property{
+								"type": {
+									Schema: ptr(swg.Definitions["XBase"].Properties["type"]),
+									addr:   ParseAddr("{XVar2}.type"),
+									visitedRefs: map[string]bool{
+										specpathA + "#/definitions/XVar2": true,
+										specpathA + "#/definitions/XVar1": true,
+										specpathA + "#/definitions/XBase": true,
+									},
+									ref: spec.MustCreateRef(specpathA + "#/definitions/XBase/properties/type"),
+								},
+							},
+						},
+					},
+				}
+				require.Equal(t, expect, root)
+			},
+		},
 	}
 
 	for _, tt := range cases {
