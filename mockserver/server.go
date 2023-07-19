@@ -99,6 +99,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	// Override response body, just return the hardcoded response body
 	if ov != nil && ov.ResponseBody != "" {
 		log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
+		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(ov.ResponseBody))
 		return
 	}
