@@ -184,12 +184,29 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 		return nil, fmt.Errorf("no responses to select")
 	}
 
-	if len(resps) == 1 || ov == nil || ov.ResponseSelector == "" {
-		if n := len(resps); n > 1 {
-			log.Warn(fmt.Sprintf("select the 1st response from %d", n))
-		}
-		// Pick the first synthesized response if there is exactly one response, or users no selector set
+	if len(resps) == 1 {
 		return json.Marshal(resps[0])
+	}
+
+	logDiff := func(resps [][]byte) {
+		if len(resps) >= 2 {
+			diff, err := jsonpatch.CreateMergePatch(resps[0], resps[1])
+			if err == nil {
+				log.Warn(fmt.Sprintf("The first two responses have following diff (resp1 -> resp2):\n%s", string(diff)))
+			}
+		}
+	}
+
+	if ov == nil || ov.ResponseSelector == "" {
+		log.Warn(fmt.Sprintf("select the 1st response from %d", len(resps)))
+		b1, err := json.Marshal(resps[0])
+		if err != nil {
+			return nil, err
+		}
+		if b2, err := json.Marshal(resps[1]); err == nil {
+			logDiff([][]byte{b1, b2})
+		}
+		return b1, nil
 	}
 
 	var candidates [][]byte
@@ -217,6 +234,7 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 
 	if len(candidates) > 1 {
 		log.Warn(fmt.Sprintf("select the 1st response from %d (after selection)", len(candidates)))
+		logDiff(candidates)
 		return candidates[0], nil
 	}
 
