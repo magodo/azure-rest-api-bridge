@@ -19,7 +19,7 @@ func main() {
 	specdir := flag.String("specdir", "", "Swagger specification directory")
 	index := flag.String("index", "", "Swagger index file")
 	continueOnErr := flag.Bool("k", false, "Whether to continue on error")
-	startFrom := flag.String("start-from", "", "Start from the specified execution")
+	startFrom := flag.String("start-from", "", "Start from the specified execution, in form of `name:type`")
 
 	flag.Parse()
 

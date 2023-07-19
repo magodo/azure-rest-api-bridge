@@ -101,18 +101,23 @@ func validateExecSpec(spec Config) error {
 		return err
 	}
 
-	execNames := make(map[string]bool)
+	execNames := map[string]map[string]bool{}
 	for _, exec := range spec.Executions {
 		if exec.Skip && exec.SkipReason == "" {
-			return fmt.Errorf("skipped execution %s must have a skip_reason", exec.Name)
+			return fmt.Errorf("skipped execution %s must have a skip_reason", exec)
 		}
 		if err := validateOverride(exec.Overrides); err != nil {
 			return err
 		}
-		if _, exist := execNames[exec.Name]; exist {
-			return fmt.Errorf("duplicated execution %s", exec.Name)
+		m, ok := execNames[exec.Name]
+		if !ok {
+			m = map[string]bool{}
+			execNames[exec.Name] = m
 		}
-		execNames[exec.Name] = true
+		if m[exec.Type] {
+			return fmt.Errorf("duplicated execution %s", exec)
+		}
+		m[exec.Type] = true
 	}
 
 	return nil
@@ -125,7 +130,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		return err
 	}
 
-	outputs := make(map[string]interface{})
+	results := map[string][]SingleModelMap{}
 
 	execTotal := len(ctrl.ExecSpec.Executions)
 	execSkip := 0
@@ -137,8 +142,8 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	// Launch each execution
 	for i, execution := range ctrl.ExecSpec.Executions {
 		if ctrl.StartFrom != "" {
-			if execution.Name != ctrl.StartFrom {
-				log.Info(fmt.Sprintf("Skipping %s (%d/%d): skipped by -start-from", execution.Name, i+1, execTotal))
+			if execution.String() != ctrl.StartFrom {
+				log.Info(fmt.Sprintf("Skipping %s (%d/%d): skipped by -start-from", execution, i+1, execTotal))
 				execSkip++
 				continue
 			} else {
@@ -148,7 +153,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		}
 
 		if execution.Skip {
-			log.Info(fmt.Sprintf("Skipping %s (%d/%d): %s", execution.Name, i+1, execTotal, execution.SkipReason))
+			log.Info(fmt.Sprintf("Skipping %s (%d/%d): %s", execution, i+1, execTotal, execution.SkipReason))
 			execSkip++
 			continue
 		}
@@ -219,13 +224,13 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 				Stderr: &stderr,
 			}
 
-			log.Info(fmt.Sprintf("Executing %s (%d/%d)", execution.Name, i+1, execTotal))
+			log.Info(fmt.Sprintf("Executing %s (%d/%d)", execution, i+1, execTotal))
 
 			log.Debug("execution detail", "path", execution.Path, "args", execution.Args, "env", env, "dir", execution.Dir)
 
 			if err := cmd.Run(); err != nil {
 				log.Error("run failure", "stdout", stdout.String(), "stderr", stderr.String())
-				return fmt.Errorf("running execution %q: %v", execution.Name, err)
+				return fmt.Errorf("running execution %q: %v", execution, err)
 			}
 
 			log.Debug("execution result", "stdout", stdout.String())
@@ -233,13 +238,13 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			var appModel interface{}
 			if err := json.Unmarshal(stdout.Bytes(), &appModel); err != nil {
 				log.Error("post-execution unmarshal failure", "error", err, "stdout", stdout.String())
-				return fmt.Errorf("post-execution %q unmarshal: %v", execution.Name, err)
+				return fmt.Errorf("post-execution %q unmarshal: %v", execution, err)
 			}
 
-			m, err := MapModels(appModel, ctrl.MockServer.Records()...)
+			m, err := MapSingleAppModel(appModel, ctrl.MockServer.Records()...)
 			if err != nil {
 				log.Error("post-execution map models", "error", err)
-				return fmt.Errorf("post-execution %q map models: %v", execution.Name, err)
+				return fmt.Errorf("post-execution %q map models: %v", execution, err)
 			}
 
 			if err := m.AddLink(ctrl.MockServer.Idx.Commit, ctrl.MockServer.Specdir); err != nil {
@@ -247,7 +252,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 				return fmt.Errorf("post-execution model map adding link: %v", err)
 			}
 
-			outputs[execution.Name] = m
+			results[execution.Name] = append(results[execution.Name], m)
 
 			return nil
 		}
@@ -265,6 +270,11 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 
 	if ctrl.ContinueOnErr {
 		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execFail, "skip", execSkip)
+	}
+
+	outputs := map[string]ModelMap{}
+	for execName, models := range results {
+		outputs[execName] = NewModelMap(models)
 	}
 
 	b, err := json.MarshalIndent(outputs, "", "  ")

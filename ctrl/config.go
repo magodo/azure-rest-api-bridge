@@ -16,7 +16,9 @@ type Override struct {
 }
 
 type Execution struct {
-	Name       string            `hcl:"name,label"`
+	Name string `hcl:"name,label"`
+	Type string `hcl:"type,label"`
+
 	Skip       bool              `hcl:"skip,optional"`
 	SkipReason string            `hcl:"skip_reason,optional"`
 	Overrides  []Override        `hcl:"override,block"`
@@ -24,6 +26,10 @@ type Execution struct {
 	Dir        string            `hcl:"dir,optional"`
 	Path       string            `hcl:"path,attr"`
 	Args       []string          `hcl:"args,optional"`
+}
+
+func (exec Execution) String() string {
+	return exec.Name + "[" + exec.Type + "]"
 }
 
 type SynthOption struct {

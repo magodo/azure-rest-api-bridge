@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -12,12 +13,13 @@ import (
 	"github.com/magodo/jsonpointerpos"
 )
 
-// ModelMap maps a jsonpointer of a property in the application model to a property *definition* in the API model spec
+// SingleModelMap maps a jsonpointer of a property in the application model to a property *definition* in the API model spec
 // In case there is no such property defintion (e.g. some undefined properties appear in an object), or the property definition
 // encountered a circular reference during its expansion, the value of the map is nil.
-type ModelMap map[string]*swagger.JSONValuePos
+type SingleModelMap map[string]*swagger.JSONValuePos
 
-func (m ModelMap) AddLink(commit, specdir string) error {
+// AddLink adds the LinkLocal and LinkGithuhub for each value (*swagger.JSONValuePos) of the SignleModelMap.
+func (m SingleModelMap) AddLink(commit, specdir string) error {
 	pm := map[string][]jsonpointer.Pointer{}
 	for k, v := range m {
 		if v == nil {
@@ -58,7 +60,7 @@ func (m ModelMap) AddLink(commit, specdir string) error {
 	return nil
 }
 
-func MapModels(appModel interface{}, apiModels ...swagger.JSONValue) (ModelMap, error) {
+func MapSingleAppModel(appModel interface{}, apiModels ...swagger.JSONValue) (SingleModelMap, error) {
 	apiValueMap, err := swagger.JSONValueValueMap(apiModels...)
 	if err != nil {
 		return nil, fmt.Errorf("building value map for API models: %v", err)
@@ -75,6 +77,38 @@ func MapModels(appModel interface{}, apiModels ...swagger.JSONValue) (ModelMap, 
 	return m, nil
 }
 
+// ModelMap is same as SingleModelMap, but might maps one app model property to multiple API model properties.
+// This is resulted from merging multiple SingleModelMap(s).
+type ModelMap map[string][]*swagger.JSONValuePos
+
+func NewModelMap(models []SingleModelMap) ModelMap {
+	tmpM := map[string]map[string]*swagger.JSONValuePos{}
+	for _, model := range models {
+		for k, v := range model {
+			m, ok := tmpM[k]
+			if !ok {
+				m = map[string]*swagger.JSONValuePos{}
+				tmpM[k] = m
+			}
+			// We use API property address as the unique key
+			m[v.Addr.String()] = v
+		}
+	}
+	result := ModelMap{}
+	for k, m := range tmpM {
+		var l []*swagger.JSONValuePos
+		for _, v := range m {
+			l = append(l, v)
+		}
+		sort.Slice(l, func(i, j int) bool {
+			return l[i].Addr.String() < l[j].Addr.String()
+		})
+		result[k] = l
+	}
+	return result
+}
+
+// jsonValueMap flattens a JSON object to a single level k-v map that mapps the jsonpointer to each property to the strings representation of its value, and reverse the keys and values to be a value map.
 func jsonValueMap(m interface{}) map[string]string {
 	out := map[string]string{}
 	dupm := map[string]bool{}
