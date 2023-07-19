@@ -19,6 +19,7 @@ func main() {
 	specdir := flag.String("specdir", "", "Swagger specification directory")
 	index := flag.String("index", "", "Swagger index file")
 	continueOnErr := flag.Bool("k", false, "Whether to continue on error")
+	startFrom := flag.String("start-from", "", "Start from the specified execution")
 
 	flag.Parse()
 
@@ -39,6 +40,7 @@ func main() {
 			Index:   *index,
 			SpecDir: *specdir,
 		},
+		StartFrom: *startFrom,
 	})
 	if err != nil {
 		log.Error(err.Error())

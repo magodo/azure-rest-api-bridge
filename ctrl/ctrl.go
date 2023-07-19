@@ -25,12 +25,15 @@ type Option struct {
 	ConfigFile    string
 	ContinueOnErr bool
 	ServerOption  mockserver.Option
+	StartFrom     string
 }
 
 type Ctrl struct {
 	ExecSpec      Config
 	ContinueOnErr bool
 	MockServer    mockserver.Server
+
+	StartFrom string
 }
 
 func NewCtrl(opt Option) (*Ctrl, error) {
@@ -71,6 +74,7 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 		ExecSpec:      execSpec,
 		ContinueOnErr: opt.ContinueOnErr,
 		MockServer:    *srv,
+		StartFrom:     opt.StartFrom,
 	}, nil
 }
 
@@ -124,6 +128,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	outputs := make(map[string]interface{})
 
 	execTotal := len(ctrl.ExecSpec.Executions)
+	execSkip := 0
 	execSucceed := 0
 	execFail := 0
 
@@ -131,11 +136,24 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 
 	// Launch each execution
 	for i, execution := range ctrl.ExecSpec.Executions {
-		run := func(execution Execution) error {
-			if execution.Skip {
-				log.Info(fmt.Sprintf("Skipping %s (%d/%d): %s", execution.Name, i+1, execTotal, execution.SkipReason))
-				return nil
+		if ctrl.StartFrom != "" {
+			if execution.Name != ctrl.StartFrom {
+				log.Info(fmt.Sprintf("Skipping %s (%d/%d): skipped by -start-from", execution.Name, i+1, execTotal))
+				execSkip++
+				continue
+			} else {
+				// reset it so that the following executions will not be skipped
+				ctrl.StartFrom = ""
 			}
+		}
+
+		if execution.Skip {
+			log.Info(fmt.Sprintf("Skipping %s (%d/%d): %s", execution.Name, i+1, execTotal, execution.SkipReason))
+			execSkip++
+			continue
+		}
+
+		run := func(execution Execution) error {
 
 			overrides := append([]Override{}, execution.Overrides...)
 			overrides = append(overrides, ctrl.ExecSpec.Overrides...)
@@ -235,8 +253,8 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		}
 
 		if err := run(execution); err != nil {
+			execFail++
 			if ctrl.ContinueOnErr {
-				execFail++
 				continue
 			}
 			return err
@@ -246,7 +264,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	}
 
 	if ctrl.ContinueOnErr {
-		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execFail)
+		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execFail, "skip", execSkip)
 	}
 
 	b, err := json.MarshalIndent(outputs, "", "  ")
