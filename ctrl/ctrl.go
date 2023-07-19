@@ -81,17 +81,20 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 func validateExecSpec(spec Config) error {
 	validateOverride := func(ovs []Override) error {
 		for _, ov := range ovs {
-			if ov.ResponseBody+ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch == "" && ov.ExpanderOption == nil && ov.SynthOption == nil {
+			if ov.ResponseBody+ov.ResponseSelectorMerge+ov.ResponseSelectorJSON+ov.ResponsePatchJSON+ov.ResponsePatchMerge == "" && ov.ExpanderOption == nil && ov.SynthOption == nil {
 				return fmt.Errorf("empty override block is not allowed")
 			}
 			if ov.ResponseBody != "" {
-				if ov.ResponseSelector+ov.ResponseJSONPatch+ov.ResponseMergePatch != "" || ov.ExpanderOption != nil || ov.SynthOption != nil {
+				if ov.ResponseSelectorMerge+ov.ResponseSelectorJSON+ov.ResponsePatchJSON+ov.ResponsePatchMerge != "" || ov.ExpanderOption != nil || ov.SynthOption != nil {
 					return fmt.Errorf("`response_body` can only be exclusive specified")
 				}
 				continue
 			}
-			if ov.ResponseJSONPatch != "" && ov.ResponseMergePatch != "" {
-				return fmt.Errorf("`response_merge_patch` conflicts with `response_json_patch`")
+			if ov.ResponsePatchJSON != "" && ov.ResponsePatchMerge != "" {
+				return fmt.Errorf("`response_patch_merge` conflicts with `response_patch_json`")
+			}
+			if ov.ResponseSelectorMerge != "" && ov.ResponseSelectorJSON != "" {
+				return fmt.Errorf("`response_selector_merge` conflicts with `response_selector_json`")
 			}
 		}
 		return nil
@@ -166,12 +169,13 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			var ovs []mockserver.Override
 			for _, override := range overrides {
 				ov := mockserver.Override{
-					PathPattern:        *regexp.MustCompile(override.PathPattern),
-					ResponseSelector:   override.ResponseSelector,
-					ResponseBody:       override.ResponseBody,
-					ResponseMergePatch: override.ResponseMergePatch,
-					ResponseJSONPatch:  override.ResponseJSONPatch,
-					SynthOption:        &swagger.SynthesizerOption{},
+					PathPattern:           *regexp.MustCompile(override.PathPattern),
+					ResponseSelectorMerge: override.ResponseSelectorMerge,
+					ResponseSelectorJSON:  override.ResponseSelectorJSON,
+					ResponseBody:          override.ResponseBody,
+					ResponsePatchMerge:    override.ResponsePatchMerge,
+					ResponsePatchJSON:     override.ResponsePatchJSON,
+					SynthOption:           &swagger.SynthesizerOption{},
 					ExpanderOption: &swagger.ExpanderOption{
 						Cache: expCache,
 					},

@@ -38,13 +38,14 @@ type Server struct {
 type Overrides []Override
 
 type Override struct {
-	PathPattern        regexp.Regexp
-	ResponseSelector   string
-	ResponseBody       string
-	ResponseMergePatch string
-	ResponseJSONPatch  string
-	SynthOption        *swagger.SynthesizerOption
-	ExpanderOption     *swagger.ExpanderOption
+	PathPattern           regexp.Regexp
+	ResponseSelectorMerge string
+	ResponseSelectorJSON  string
+	ResponseBody          string
+	ResponsePatchMerge    string
+	ResponsePatchJSON     string
+	SynthOption           *swagger.SynthesizerOption
+	ExpanderOption        *swagger.ExpanderOption
 }
 
 func (ovs Overrides) Match(path string) *Override {
@@ -128,16 +129,16 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 
 	if ov != nil {
 		switch {
-		case ov.ResponseMergePatch != "":
-			log.Debug("override", "type", "merge patch", "url", r.URL.String(), "value", ov.ResponseMergePatch)
-			b, err = jsonpatch.MergePatch(b, []byte(ov.ResponseMergePatch))
+		case ov.ResponsePatchMerge != "":
+			log.Debug("override", "type", "merge patch", "url", r.URL.String(), "value", ov.ResponsePatchMerge)
+			b, err = jsonpatch.MergePatch(b, []byte(ov.ResponsePatchMerge))
 			if err != nil {
 				srv.writeError(w, err)
 				return
 			}
-		case ov.ResponseJSONPatch != "":
-			log.Debug("override", "type", "json patch", "url", r.URL.String(), "value", ov.ResponseJSONPatch)
-			patch, err := jsonpatch.DecodePatch([]byte(ov.ResponseJSONPatch))
+		case ov.ResponsePatchJSON != "":
+			log.Debug("override", "type", "json patch", "url", r.URL.String(), "value", ov.ResponsePatchJSON)
+			patch, err := jsonpatch.DecodePatch([]byte(ov.ResponsePatchJSON))
 			if err != nil {
 				srv.writeError(w, err)
 				return
@@ -197,7 +198,7 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 		}
 	}
 
-	if ov == nil || ov.ResponseSelector == "" {
+	if ov == nil || ov.ResponseSelectorMerge == "" && ov.ResponseSelectorJSON == "" {
 		log.Warn(fmt.Sprintf("select the 1st response from %d", len(resps)))
 		b1, err := json.Marshal(resps[0])
 		if err != nil {
@@ -209,27 +210,44 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 		return b1, nil
 	}
 
+	selector := ov.ResponseSelectorMerge
+	if selector == "" {
+		selector = ov.ResponseSelectorJSON
+	}
+
 	var candidates [][]byte
 	for _, resp := range resps {
 		bOld, err := json.Marshal(resp)
 		if err != nil {
 			return nil, err
 		}
-		log.Debug("override", "type", "selector", "sel", ov.ResponseSelector, "resp", string(bOld))
+
+		log.Debug("override", "type", "selector", "sel", selector, "resp", string(bOld))
 
 		// Each selector is a json merge patch, we expect to apply this patch to the response and pick
 		// the one that has no difference between the itself and with the patch applied.
-		bNew, err := jsonpatch.MergePatch(bOld, []byte(ov.ResponseSelector))
-		if err != nil {
-			return nil, err
+
+		var bNew []byte
+		if ov.ResponseSelectorMerge != "" {
+			bNew, err = jsonpatch.MergePatch(bOld, []byte(ov.ResponseSelectorMerge))
+		} else {
+			patch, err := jsonpatch.DecodePatch([]byte(ov.ResponseSelectorJSON))
+			if err != nil {
+				return nil, fmt.Errorf("decoding response selector json patch: %v", err)
+			}
+			bNew, err = patch.Apply(bOld)
 		}
+		if err != nil {
+			return nil, fmt.Errorf("applying response selector patch: %v", err)
+		}
+
 		if string(bOld) == string(bNew) {
 			candidates = append(candidates, bOld)
 		}
 	}
 
 	if len(candidates) == 0 {
-		return nil, fmt.Errorf("no synth response found with the response selector: %s", ov.ResponseSelector)
+		return nil, fmt.Errorf("no synth response found with the response selector: %s", selector)
 	}
 
 	if len(candidates) > 1 {
