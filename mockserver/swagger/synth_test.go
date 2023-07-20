@@ -303,6 +303,78 @@ func TestSynthesize(t *testing.T) {
 			},
 		},
 		{
+			name: specpathSyn + "#/definitions/array_base",
+			ref:  specpathSyn + "#/definitions/array_base",
+			expect: []string{
+				`
+		[
+			{
+				"prop": {
+					"type": "var1",
+					"prop1": "b"
+				}
+			}
+		]
+						`,
+				`
+		[
+			{
+				"prop": {
+					"type": "var2",
+					"prop2": "c"
+				}
+			}
+		]
+						`,
+			},
+		},
+		{
+			name: specpathSyn + "#/definitions/array_base (duplicate)",
+			ref:  specpathSyn + "#/definitions/array_base",
+			opt: &SynthesizerOption{
+				DuplicateElements: []SynthDuplicateElement{
+					{
+						Cnt:  1,
+						Addr: ParseAddr(""),
+					},
+				},
+			},
+			expect: []string{
+				`
+		[
+			{
+				"prop": {
+					"type": "var1",
+					"prop1": "b"
+				}
+			},
+			{
+				"prop": {
+					"type": "var1",
+					"prop1": "d"
+				}
+			}
+		]
+						`,
+				`
+		[
+			{
+				"prop": {
+					"type": "var2",
+					"prop2": "c"
+				}
+			},
+			{
+				"prop": {
+					"type": "var2",
+					"prop2": "e"
+				}
+			}
+		]
+						`,
+			},
+		},
+		{
 			name: specpathSyn + "#/definitions/conflictbase",
 			ref:  specpathSyn + "#/definitions/conflictbase",
 			expect: []string{

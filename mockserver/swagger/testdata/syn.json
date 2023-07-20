@@ -96,6 +96,17 @@
                 }
             }
         },
+        "array_base": {
+            "type": "array",
+            "items":  {
+                "type": "object",
+                "properties": {
+                    "prop": {
+                        "$ref": "#/definitions/base"
+                    }
+                }
+            }
+        },
         "msbase": {
             "discriminator": "type",
             "properties": {
