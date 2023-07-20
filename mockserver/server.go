@@ -191,9 +191,9 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 
 	logDiff := func(resps [][]byte) {
 		if len(resps) >= 2 {
-			diff, err := jsonpatch.CreateMergePatch(resps[0], resps[1])
+			diff, err := jsonpatch.CreateMergePatch(resps[1], resps[0])
 			if err == nil {
-				log.Warn(fmt.Sprintf("The first two responses have following diff (resp1 -> resp2):\n%s", string(diff)))
+				log.Warn(fmt.Sprintf("The first two responses have following diff (resp2 -> resp1):\n%s", string(diff)))
 			}
 		}
 	}
