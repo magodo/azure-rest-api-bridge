@@ -30,7 +30,7 @@ type Execution struct {
 }
 
 func (exec Execution) String() string {
-	return exec.Name + "[" + exec.Type + "]"
+	return exec.Name + "." + exec.Type
 }
 
 type SynthOption struct {

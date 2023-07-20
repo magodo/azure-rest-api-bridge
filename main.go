@@ -20,7 +20,8 @@ func main() {
 	specdir := flag.String("specdir", "", "Swagger specification directory")
 	index := flag.String("index", "", "Swagger index file")
 	continueOnErr := flag.Bool("k", false, "Whether to continue on error")
-	startFrom := flag.String("start-from", "", "Start from the specified execution, in form of `name:type`")
+	execFrom := flag.String("from", "", "Run execution from the specified one (inclusively), in form of `name.type`")
+	execTo := flag.String("to", "", "Run execution until the specified one (exclusively), in form of `name.type`")
 	timeout := flag.Int("timeout", 60, "The mock server read/write timeout in second")
 
 	flag.Parse()
@@ -43,7 +44,8 @@ func main() {
 			SpecDir: *specdir,
 			Timeout: time.Duration(*timeout) * time.Second,
 		},
-		StartFrom: *startFrom,
+		ExecFrom: *execFrom,
+		ExecTo:   *execTo,
 	})
 	if err != nil {
 		log.Error(err.Error())

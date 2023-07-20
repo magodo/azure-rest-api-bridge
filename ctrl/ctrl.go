@@ -25,7 +25,8 @@ type Option struct {
 	ConfigFile    string
 	ContinueOnErr bool
 	ServerOption  mockserver.Option
-	StartFrom     string
+	ExecFrom      string
+	ExecTo        string
 }
 
 type Ctrl struct {
@@ -33,8 +34,18 @@ type Ctrl struct {
 	ContinueOnErr bool
 	MockServer    mockserver.Server
 
-	StartFrom string
+	ExecFrom  string
+	ExecTo    string
+	execState ExecutionState
 }
+
+type ExecutionState int
+
+const (
+	ExecutionStateBeforeRun ExecutionState = iota
+	ExecutionStateRunning
+	ExecutionStateAfterRun
+)
 
 func NewCtrl(opt Option) (*Ctrl, error) {
 	parser := hclparse.NewParser()
@@ -74,7 +85,9 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 		ExecSpec:      execSpec,
 		ContinueOnErr: opt.ContinueOnErr,
 		MockServer:    *srv,
-		StartFrom:     opt.StartFrom,
+		ExecFrom:      opt.ExecFrom,
+		ExecTo:        opt.ExecTo,
+		execState:     ExecutionStateBeforeRun,
 	}, nil
 }
 
@@ -144,15 +157,26 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 
 	// Launch each execution
 	for i, execution := range ctrl.ExecSpec.Executions {
-		if ctrl.StartFrom != "" {
-			if execution.String() != ctrl.StartFrom {
-				log.Info(fmt.Sprintf("Skipping %s (%d/%d): skipped by -start-from", execution, i+1, execTotal))
+		switch ctrl.execState {
+		case ExecutionStateBeforeRun:
+			if ctrl.ExecFrom == "" || ctrl.ExecFrom == execution.String() {
+				ctrl.execState = ExecutionStateRunning
+			} else {
+				log.Info(fmt.Sprintf("Skipping %s (%d/%d): skipped by -from", execution, i+1, execTotal))
 				execSkip++
 				continue
-			} else {
-				// reset it so that the following executions will not be skipped
-				ctrl.StartFrom = ""
 			}
+		case ExecutionStateRunning:
+			if ctrl.ExecTo != "" && ctrl.ExecTo == execution.String() {
+				ctrl.execState = ExecutionStateAfterRun
+				log.Info(fmt.Sprintf("Skipping %s (%d/%d): skipped by -to", execution, i+1, execTotal))
+				execSkip++
+				continue
+			}
+		case ExecutionStateAfterRun:
+			log.Info(fmt.Sprintf("Skipping %s (%d/%d): skipped by -to", execution, i+1, execTotal))
+			execSkip++
+			continue
 		}
 
 		if execution.Skip {
