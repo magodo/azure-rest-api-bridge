@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/magodo/azure-rest-api-bridge/ctrl"
@@ -20,6 +21,7 @@ func main() {
 	index := flag.String("index", "", "Swagger index file")
 	continueOnErr := flag.Bool("k", false, "Whether to continue on error")
 	startFrom := flag.String("start-from", "", "Start from the specified execution, in form of `name:type`")
+	timeout := flag.Int("timeout", 60, "The mock server read/write timeout in second")
 
 	flag.Parse()
 
@@ -39,6 +41,7 @@ func main() {
 			Port:    *port,
 			Index:   *index,
 			SpecDir: *specdir,
+			Timeout: time.Duration(*timeout) * time.Second,
 		},
 		StartFrom: *startFrom,
 	})

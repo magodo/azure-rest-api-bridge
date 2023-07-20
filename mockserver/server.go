@@ -23,6 +23,7 @@ import (
 type Server struct {
 	Addr       string
 	Port       int
+	timeout    time.Duration
 	server     *http.Server
 	shutdownCh <-chan struct{}
 
@@ -63,6 +64,7 @@ type Option struct {
 	Port    int
 	Index   string
 	SpecDir string
+	Timeout time.Duration
 }
 
 // New creates a new (uninitialized) mockserver, which can be started, but needs to be initiated in order to work as expected.
@@ -80,6 +82,7 @@ func New(opt Option) (*Server, error) {
 		Port:    opt.Port,
 		Idx:     index,
 		Specdir: opt.SpecDir,
+		timeout: opt.Timeout,
 	}, nil
 }
 
@@ -303,8 +306,8 @@ func (srv *Server) Start() error {
 	mux.HandleFunc("/", srv.Handle)
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", srv.Addr, srv.Port),
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  srv.timeout,
+		WriteTimeout: srv.timeout,
 		Handler:      mux,
 	}
 	shutdownCh := make(chan struct{})
