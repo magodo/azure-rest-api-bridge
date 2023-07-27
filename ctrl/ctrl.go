@@ -94,7 +94,7 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 func validateExecSpec(spec Config) error {
 	validateOverride := func(ovs []Override) error {
 		for _, ov := range ovs {
-			if ov.ResponseBody+ov.ResponseSelectorMerge+ov.ResponseSelectorJSON+ov.ResponsePatchJSON+ov.ResponsePatchMerge == "" && ov.ExpanderOption == nil && ov.SynthOption == nil {
+			if ov.ResponseBody+ov.ResponseSelectorMerge+ov.ResponseSelectorJSON+ov.ResponsePatchJSON+ov.ResponsePatchMerge == "" && len(ov.ResponseHeader) == 0 && ov.ExpanderOption == nil && ov.SynthOption == nil {
 				return fmt.Errorf("empty override block is not allowed")
 			}
 			if ov.ResponseBody != "" {
@@ -199,6 +199,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 					ResponseBody:          override.ResponseBody,
 					ResponsePatchMerge:    override.ResponsePatchMerge,
 					ResponsePatchJSON:     override.ResponsePatchJSON,
+					ResponseHeader:        override.ResponseHeader,
 					SynthOption:           &swagger.SynthesizerOption{},
 					ExpanderOption: &swagger.ExpanderOption{
 						Cache: expCache,

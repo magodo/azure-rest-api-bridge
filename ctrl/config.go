@@ -6,14 +6,15 @@ type Config struct {
 }
 
 type Override struct {
-	PathPattern           string          `hcl:"path_pattern,attr"`
-	ResponseSelectorMerge string          `hcl:"response_selector_merge,optional"`
-	ResponseSelectorJSON  string          `hcl:"response_selector_json,optional"`
-	ResponseBody          string          `hcl:"response_body,optional"`
-	ResponsePatchMerge    string          `hcl:"response_patch_merge,optional"`
-	ResponsePatchJSON     string          `hcl:"response_patch_json,optional"`
-	ExpanderOption        *ExpanderOption `hcl:"expander,block"`
-	SynthOption           *SynthOption    `hcl:"synthesizer,block"`
+	PathPattern           string            `hcl:"path_pattern,attr"`
+	ResponseSelectorMerge string            `hcl:"response_selector_merge,optional"`
+	ResponseSelectorJSON  string            `hcl:"response_selector_json,optional"`
+	ResponseBody          string            `hcl:"response_body,optional"`
+	ResponsePatchMerge    string            `hcl:"response_patch_merge,optional"`
+	ResponsePatchJSON     string            `hcl:"response_patch_json,optional"`
+	ResponseHeader        map[string]string `hcl:"response_header,optional"`
+	ExpanderOption        *ExpanderOption   `hcl:"expander,block"`
+	SynthOption           *SynthOption      `hcl:"synthesizer,block"`
 }
 
 type Execution struct {

@@ -39,14 +39,19 @@ type Server struct {
 type Overrides []Override
 
 type Override struct {
-	PathPattern           regexp.Regexp
+	PathPattern regexp.Regexp
+
 	ResponseSelectorMerge string
 	ResponseSelectorJSON  string
-	ResponseBody          string
-	ResponsePatchMerge    string
-	ResponsePatchJSON     string
-	SynthOption           *swagger.SynthesizerOption
-	ExpanderOption        *swagger.ExpanderOption
+
+	ResponseBody       string
+	ResponsePatchMerge string
+	ResponsePatchJSON  string
+
+	ResponseHeader map[string]string
+
+	SynthOption    *swagger.SynthesizerOption
+	ExpanderOption *swagger.ExpanderOption
 }
 
 func (ovs Overrides) Match(path string) *Override {
@@ -92,6 +97,16 @@ func (srv *Server) writeError(w http.ResponseWriter, err error) {
 	w.Write([]byte(fmt.Sprintf(`{"error": %q}`, err.Error())))
 }
 
+func (srv *Server) setHeader(w http.ResponseWriter, r *http.Request, ov *Override) {
+	w.Header().Set("Content-Type", "application/json")
+	if ov != nil && len(ov.ResponseHeader) != 0 {
+		log.Debug("override", "type", "header", "url", r.URL.String(), "value", ov.ResponseHeader)
+		for k, v := range ov.ResponseHeader {
+			w.Header().Set(k, v)
+		}
+	}
+}
+
 func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(r.URL.Path, "/oauth2/v2.0/token") {
 		srv.handleToken(w, r)
@@ -102,8 +117,8 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Override response body, just return the hardcoded response body
 	if ov != nil && ov.ResponseBody != "" {
+		srv.setHeader(w, r, ov)
 		log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
-		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(ov.ResponseBody))
 		return
 	}
@@ -162,7 +177,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	srv.records = append(srv.records, v)
-	w.Header().Set("Content-Type", "application/json")
+	srv.setHeader(w, r, ov)
 	w.Write(b)
 	return
 }
