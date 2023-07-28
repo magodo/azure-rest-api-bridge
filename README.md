@@ -35,14 +35,12 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
     export ARM_CLIENT_ID=00000000-0000-0000-000000000000
     export ARM_CLIENT_SECRET=123
     export ARM_TENANT_ID=00000000-0000-0000-000000000000
-    export ARM_PROVIDER_ENHANCED_VALIDATION=1
-    export ARM_SKIP_PROVIDER_REGISTRATION=true
     ```
 
 1. Prepare the input file for `azure-rest-api-bridge`, which is a HCL file, e.g. `config.hcl`:
 
     ```hcl
-    execution "azurerm_resource_group" {
+    execution "azurerm_resource_group" "basic" {
         path = "${home}/go/bin/terraform-client-import"
         args = [
             "-path", 
@@ -62,37 +60,51 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
 1. Run the tool:
 
     ```shell
-    azure-rest-api-bridge -port 8888 -config ./config.hcl -index /tmp/index.json -specdir $HOME/github/azure-rest-api-specs/specification
+    azure-rest-api-bridge -port 8888 -config ./config.hcl -index ./index.json -specdir $HOME/github/azure-rest-api-specs/specification
     ```
 
     It will prints something like below:
 
     ```
-    2023-06-16T18:15:03.131+0800 [INFO]  azure-rest-api-bridge: Starting the mock server
-    2023-06-16T18:15:03.131+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_resource_group
+    2023-07-28T16:19:15.743+0800 [INFO]  azure-rest-api-bridge: Starting the mock server
+    2023-07-28T16:19:15.743+0800 [INFO]  azure-rest-api-bridge: Executing azurerm_resource_group.basic (1/1)
     {
       "azurerm_resource_group": {
-          "/location": {
+        "/location": [
+          {
             "addr": "location",
-            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5439",
+            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fe78d8f1e7bd86c778c7e1cafd52cb0e9fec67ef/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5439",
             "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5439:21",
             "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/location"
-          },
-          "/name": {
+          }
+        ],
+        "/managed_by": [
+          {
+            "addr": "managedBy",
+            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fe78d8f1e7bd86c778c7e1cafd52cb0e9fec67ef/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5443",
+            "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5443:22",
+            "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/managedBy"
+          }
+        ],
+        "/name": [
+          {
             "addr": "name",
-            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5425",
+            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fe78d8f1e7bd86c778c7e1cafd52cb0e9fec67ef/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5425",
             "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5425:17",
             "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/name"
-          },
-          "/tags/KEY": {
+          }
+        ],
+        "/tags/KEY": [
+          {
             "addr": "tags.*",
-            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fda03acb3594cdd152e50146045adcf588b8c6cf/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5449",
+            "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fe78d8f1e7bd86c778c7e1cafd52cb0e9fec67ef/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5449",
             "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5449:35",
             "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/tags/additionalProperties"
           }
+        ]
       }
     }
-    2023-06-16T18:15:03.601+0800 [INFO]  azure-rest-api-bridge: Stopping the mock server
+    2023-07-28T16:19:16.585+0800 [INFO]  azure-rest-api-bridge: Stopping the mock server
     ```
 
 ## Config Format
@@ -106,10 +118,41 @@ override {
 }
 
 # 1 or more execution blocks
-execution "name" {
+execution "name" "type" {
     #...
 }
 ```
+
+---
+
+Each `execution` block is defined below:
+
+```hcl
+execution "name" "type" {
+    # 0 or more override blocks, that only applies to this execution
+    override {
+        #...
+    }
+
+    # additional environment variables for this execution
+    env = {
+        #...
+    }
+
+    # the working directory for this execution 
+    dir = "..."
+
+    # the path to the executable that is expected to print the application model as a JSON object to stdout when runs successfully 
+    path = "..."
+
+    # the arguments to the executable
+    args = [
+        #...
+    ]
+}
+```
+
+The `name` label is used as the key in the resulted output map, while the `type` represents a facets of the `name`. In context of Terraform AzureRM executions, the `name` is used as the resource type, while the `type` is used for different scenarios of the executions.
 
 ---
 
@@ -175,33 +218,6 @@ duplicate_element {
 ```
 
 ---
-
-Each `execution` block is defined below:
-
-```hcl
-execution "name" {
-    # 0 or more override blocks, that only applies to this execution
-    override {
-        #...
-    }
-
-    # additional environment variables for this execution
-    env = {
-        #...
-    }
-
-    # the working directory for this execution 
-    dir = "..."
-
-    # the path to the executable that is expected to print the application model as a JSON object to stdout when runs successfully 
-    path = "..."
-
-    # the arguments to the executable
-    args = [
-        #...
-    ]
-}
-```
 
 Note that the execution `name` must be unique.
 
