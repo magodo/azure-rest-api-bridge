@@ -35,6 +35,8 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
     export ARM_CLIENT_ID=00000000-0000-0000-000000000000
     export ARM_CLIENT_SECRET=123
     export ARM_TENANT_ID=00000000-0000-0000-000000000000
+    export ARM_PROVIDER_ENHANCED_VALIDATION=1                                                                                                                                                                                       -    
+    export ARM_SKIP_PROVIDER_REGISTRATION=true
     ```
 
 1. Prepare the input file for `azure-rest-api-bridge`, which is a HCL file, e.g. `config.hcl`:
