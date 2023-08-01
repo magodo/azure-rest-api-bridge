@@ -68,6 +68,7 @@ func walkJSONValue(val JSONValue, fn func(val JSONValue)) {
 }
 
 type JSONValuePos struct {
+	APIPath    string            `json:"api_path"`
 	Ref        jsonreference.Ref `json:"ref"`
 	Addr       PropertyAddr      `json:"addr"`
 	LinkLocal  string            `json:"link_local,omitempty"`
@@ -76,6 +77,7 @@ type JSONValuePos struct {
 
 func (pos JSONValuePos) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{
+		"api_path":    pos.APIPath,
 		"ref":         pos.Ref.String(),
 		"addr":        pos.Addr.String(),
 		"link_local":  pos.LinkLocal,
@@ -159,8 +161,9 @@ func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
 
 		if prop != nil {
 			pos = &JSONValuePos{
-				Addr: prop.addr,
-				Ref:  prop.ref.Ref,
+				Addr:    prop.addr,
+				Ref:     prop.ref.Ref,
+				APIPath: prop.apiPath,
 			}
 		}
 		switch v := v.(type) {

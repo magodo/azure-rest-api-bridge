@@ -68,11 +68,12 @@ func NewExpanderFromOpRef(ref spec.Ref, opt *ExpanderOption) (*Expander, error) 
 	if !ref.HasFullFilePath {
 		return nil, fmt.Errorf("reference %s is not normalized", &ref)
 	}
+	// Expected tks to be of length 3: ["paths", <api path>, <operation kind>]
 	tks := ref.GetPointer().DecodedTokens()
-	if len(tks) == 0 {
-		return nil, fmt.Errorf("reference %s is an empty pointer", &ref)
+	if len(tks) != 3 {
+		return nil, fmt.Errorf("expect json pointer of reference %s has 3 segments, got=%d", &ref, len(tks))
 	}
-	opKind := tks[len(tks)-1]
+	apiPath, opKind := tks[1], tks[2]
 
 	piref := refutil.Parent(ref)
 	pi, err := spec.ResolvePathItemWithBase(nil, piref, nil)
@@ -108,7 +109,14 @@ func NewExpanderFromOpRef(ref spec.Ref, opt *ExpanderOption) (*Expander, error) 
 		return nil, fmt.Errorf("circular ref found when resolving response ref %s", &respref)
 	}
 
-	return NewExpander(refutil.Append(respref, "schema"), opt)
+	exp, err := NewExpander(refutil.Append(respref, "schema"), opt)
+	if err != nil {
+		return nil, err
+	}
+
+	exp.root.apiPath = apiPath
+
+	return exp, nil
 }
 
 func (e *Expander) Root() *Property {
@@ -201,6 +209,7 @@ func (e *Expander) expandPropStepAsArray(prop *Property) error {
 	}
 	prop.Element = &Property{
 		Schema:      schema,
+		apiPath:     prop.apiPath,
 		ref:         ownRef,
 		addr:        addr,
 		visitedRefs: visited,
@@ -230,6 +239,7 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 					Type: spec.StringOrArray{"string"},
 				},
 			},
+			apiPath:     prop.apiPath,
 			ref:         refutil.Append(prop.ref, "additionalProperties"),
 			addr:        addr,
 			visitedRefs: prop.visitedRefs,
@@ -255,6 +265,7 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 	}
 
 	prop.Element = &Property{
+		apiPath:     prop.apiPath,
 		Schema:      schema,
 		ref:         ownRef,
 		addr:        addr,
@@ -336,6 +347,7 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 		}
 		prop.Children[k] = &Property{
 			Schema:      schema,
+			apiPath:     prop.apiPath,
 			ref:         ownRef,
 			addr:        addr,
 			visitedRefs: visited,
@@ -355,6 +367,7 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 			ref: ownRef,
 			root: &Property{
 				Schema:      schema,
+				apiPath:     prop.apiPath,
 				ref:         ownRef,
 				addr:        prop.addr,
 				visitedRefs: visited,
@@ -403,6 +416,7 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property, varInfo Variant
 		}
 		prop.Variant[vValue] = &Property{
 			Schema:             psch,
+			apiPath:            prop.apiPath,
 			ref:                ownRef,
 			addr:               addr,
 			visitedRefs:        visited,

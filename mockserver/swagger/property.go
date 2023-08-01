@@ -11,7 +11,12 @@ type PropertyName struct {
 
 type Property struct {
 	Schema *spec.Schema
-	addr   PropertyAddr
+
+	// The API path whose response is the main model of this property.
+	apiPath string
+
+	// The property address starting from the main model.
+	addr PropertyAddr
 
 	// The resolved refs (normalized) along the way to this property, which is used to avoid cyclic reference.
 	visitedRefs map[string]bool
