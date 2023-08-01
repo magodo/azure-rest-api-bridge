@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/jsonpointer"
+	"github.com/go-openapi/jsonreference"
 	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 	"github.com/magodo/jsonpointerpos"
 )
@@ -55,6 +56,27 @@ func (m SingleModelMap) AddLink(commit, specdir string) error {
 		v.LinkLocal = fmt.Sprintf("%s:%d:%d", fpath, pos.Line, pos.Column)
 		if commit != "" {
 			v.LinkGithub = "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(pos.Line)
+		}
+	}
+	return nil
+}
+
+func (m SingleModelMap) RelativeLocalLink(specdir string) error {
+	for _, pos := range m {
+		if pos.Ref.GetURL() != nil {
+			path, err := filepath.Rel(specdir, pos.Ref.GetURL().Path)
+			if err != nil {
+				return err
+			}
+			pos.Ref = jsonreference.MustCreateRef(path + "#" + pos.Ref.GetPointer().String())
+		}
+		if pos.LinkLocal != "" {
+			parts := strings.SplitN(pos.LinkLocal, ":", 2)
+			path, err := filepath.Rel(specdir, parts[0])
+			if err != nil {
+				return err
+			}
+			pos.LinkLocal = path + ":" + parts[1]
 		}
 	}
 	return nil

@@ -280,6 +280,10 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 				log.Error("post-execution model map adding link", "error", err)
 				return fmt.Errorf("post-execution model map adding link: %v", err)
 			}
+			if err := m.RelativeLocalLink(ctrl.MockServer.Specdir); err != nil {
+				log.Error("post-execution model map relative local link", "error", err)
+				return fmt.Errorf("post-execution model map relative local link: %v", err)
+			}
 
 			results[execution.Name] = append(results[execution.Name], m)
 
@@ -301,18 +305,10 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execFail, "skip", execSkip)
 	}
 
-	outputs := map[string]ModelMap{}
-	for execName, models := range results {
-		outputs[execName] = NewModelMap(models)
+	if err := ctrl.WriteResult(ctx, results); err != nil {
+		log.Error("Write Result", "err", err.Error())
+		return err
 	}
-
-	b, err := json.MarshalIndent(outputs, "", "  ")
-	if err != nil {
-		log.Error("post-execution marshalling map", "error", err)
-		return fmt.Errorf("post-execution marshalling map: %v", err)
-	}
-
-	fmt.Println(string(b))
 
 	// Stop mock server
 	log.Info("Stopping the mock server")
@@ -320,5 +316,20 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		return err
 	}
 
+	return nil
+}
+
+func (ctrl *Ctrl) WriteResult(ctx context.Context, results map[string][]SingleModelMap) error {
+	outputs := map[string]ModelMap{}
+	for execName, models := range results {
+		outputs[execName] = NewModelMap(models)
+	}
+
+	b, err := json.MarshalIndent(outputs, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshalling output: %v", err)
+	}
+
+	fmt.Println(string(b))
 	return nil
 }
