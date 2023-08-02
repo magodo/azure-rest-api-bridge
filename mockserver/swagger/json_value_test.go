@@ -1,6 +1,7 @@
 package swagger
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -370,4 +371,19 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 			require.Equal(t, tt.expect, v)
 		})
 	}
+}
+
+func TestUnmarshalJSONValuePos(t *testing.T) {
+	var pos JSONValuePos
+	input := []byte(`{
+  "api_path": "p1",
+  "ref": "p1#/foo/bar",
+  "addr": "a.b",
+  "link_local": "p1/p2:1:2",
+  "link_github": "https://github.com/blah"
+}`)
+	require.NoError(t, json.Unmarshal(input, &pos))
+	b, err := json.Marshal(pos)
+	require.NoError(t, err)
+	require.JSONEq(t, string(input), string(b))
 }

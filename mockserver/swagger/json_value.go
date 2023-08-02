@@ -86,6 +86,29 @@ func (pos JSONValuePos) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
+func (pos *JSONValuePos) UnmarshalJSON(b []byte) error {
+	var m map[string]interface{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+	if v, ok := m["api_path"]; ok {
+		pos.APIPath = v.(string)
+	}
+	if v, ok := m["ref"]; ok {
+		pos.Ref = jsonreference.MustCreateRef(v.(string))
+	}
+	if v, ok := m["addr"]; ok {
+		pos.Addr = ParseAddr(v.(string))
+	}
+	if v, ok := m["link_local"]; ok {
+		pos.LinkLocal = v.(string)
+	}
+	if v, ok := m["link_github"]; ok {
+		pos.LinkGithub = v.(string)
+	}
+	return nil
+}
+
 // JSONValueValueMap merges one or more JSONValue into a map whose key is the un-ambiguous leaf value of the input JSONValue(s).
 // For the ambiguous leaf value (i.e. multiple properties among the JSONValue(s) have the same value), they are not included in the returning map.
 func JSONValueValueMap(l ...JSONValue) (map[string]*JSONValuePos, error) {
