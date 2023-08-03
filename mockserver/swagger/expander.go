@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
 	"github.com/magodo/azure-rest-api-bridge/log"
 	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger/refutil"
@@ -73,7 +74,7 @@ func NewExpanderFromOpRef(ref spec.Ref, opt *ExpanderOption) (*Expander, error) 
 	if len(tks) != 3 {
 		return nil, fmt.Errorf("expect json pointer of reference %s has 3 segments, got=%d", &ref, len(tks))
 	}
-	apiPath, opKind := tks[1], tks[2]
+	opKind := strings.ToLower(tks[2])
 
 	piref := refutil.Parent(ref)
 	pi, err := spec.ResolvePathItemWithBase(nil, piref, nil)
@@ -81,8 +82,17 @@ func NewExpanderFromOpRef(ref spec.Ref, opt *ExpanderOption) (*Expander, error) 
 		return nil, fmt.Errorf("resolving path item ref %s: %v", &piref, err)
 	}
 
+	doc, err := loads.Spec(ref.GetURL().Path)
+	if err != nil {
+		return nil, fmt.Errorf("loading the spec %s: %v", ref.GetURL().Path, err)
+	}
+	var apiVersion string
+	if info := doc.Spec().Info; info != nil {
+		apiVersion = info.Version
+	}
+
 	var op *spec.Operation
-	switch strings.ToLower(opKind) {
+	switch opKind {
 	case "get":
 		op = pi.Get
 	case "post":
@@ -114,7 +124,11 @@ func NewExpanderFromOpRef(ref spec.Ref, opt *ExpanderOption) (*Expander, error) 
 		return nil, err
 	}
 
-	exp.root.apiPath = apiPath
+	exp.root.RootModel = RootModelInfo{
+		PathRef:   piref.Ref,
+		Operation: opKind,
+		Version:   apiVersion,
+	}
 
 	return exp, nil
 }
@@ -209,7 +223,7 @@ func (e *Expander) expandPropStepAsArray(prop *Property) error {
 	}
 	prop.Element = &Property{
 		Schema:      schema,
-		apiPath:     prop.apiPath,
+		RootModel:   prop.RootModel,
 		ref:         ownRef,
 		addr:        addr,
 		visitedRefs: visited,
@@ -239,7 +253,7 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 					Type: spec.StringOrArray{"string"},
 				},
 			},
-			apiPath:     prop.apiPath,
+			RootModel:   prop.RootModel,
 			ref:         refutil.Append(prop.ref, "additionalProperties"),
 			addr:        addr,
 			visitedRefs: prop.visitedRefs,
@@ -265,7 +279,7 @@ func (e *Expander) expandPropAsMap(prop *Property) error {
 	}
 
 	prop.Element = &Property{
-		apiPath:     prop.apiPath,
+		RootModel:   prop.RootModel,
 		Schema:      schema,
 		ref:         ownRef,
 		addr:        addr,
@@ -347,7 +361,7 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 		}
 		prop.Children[k] = &Property{
 			Schema:      schema,
-			apiPath:     prop.apiPath,
+			RootModel:   prop.RootModel,
 			ref:         ownRef,
 			addr:        addr,
 			visitedRefs: visited,
@@ -367,7 +381,7 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 			ref: ownRef,
 			root: &Property{
 				Schema:      schema,
-				apiPath:     prop.apiPath,
+				RootModel:   prop.RootModel,
 				ref:         ownRef,
 				addr:        prop.addr,
 				visitedRefs: visited,
@@ -416,7 +430,7 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property, varInfo Variant
 		}
 		prop.Variant[vValue] = &Property{
 			Schema:             psch,
-			apiPath:            prop.apiPath,
+			RootModel:          prop.RootModel,
 			ref:                ownRef,
 			addr:               addr,
 			visitedRefs:        visited,

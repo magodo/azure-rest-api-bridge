@@ -1,6 +1,9 @@
 package swagger
 
 import (
+	"encoding/json"
+
+	"github.com/go-openapi/jsonreference"
 	"github.com/go-openapi/spec"
 )
 
@@ -9,11 +12,43 @@ type PropertyName struct {
 	Variant string
 }
 
+type RootModelInfo struct {
+	PathRef   jsonreference.Ref `json:"path_ref"`
+	Operation string            `json:"operation"`
+	Version   string            `json:"version"`
+}
+
+func (model RootModelInfo) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"path_ref":  model.PathRef.String(),
+		"operation": model.Operation,
+		"version":   model.Version,
+	}
+	return json.Marshal(m)
+}
+
+func (model *RootModelInfo) UnmarshalJSON(b []byte) error {
+	var m map[string]interface{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+	if v, ok := m["path_ref"]; ok {
+		model.PathRef = jsonreference.MustCreateRef(v.(string))
+	}
+	if v, ok := m["operation"]; ok {
+		model.Operation = v.(string)
+	}
+	if v, ok := m["version"]; ok {
+		model.Version = v.(string)
+	}
+	return nil
+}
+
 type Property struct {
 	Schema *spec.Schema
 
-	// The API path whose response is the main model of this property.
-	apiPath string
+	// The root model information that holds this property.
+	RootModel RootModelInfo
 
 	// The property address starting from the main model.
 	addr PropertyAddr
