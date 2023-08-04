@@ -78,6 +78,13 @@ func (m SingleModelMap) RelativeLocalLink(specdir string) error {
 			}
 			pos.LinkLocal = path + ":" + parts[1]
 		}
+		if ref := pos.RootModel.PathRef; ref.GetURL() != nil {
+			path, err := filepath.Rel(specdir, ref.GetURL().Path)
+			if err != nil {
+				return err
+			}
+			pos.RootModel.PathRef = jsonreference.MustCreateRef(path + "#" + ref.GetPointer().String())
+		}
 	}
 	return nil
 }
