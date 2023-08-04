@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -34,6 +35,12 @@ func main() {
 	logger := hclog.New(logOpt)
 	log.SetLogger(logger)
 
+	specAbsPath, err := filepath.Abs(*specdir)
+	if err != nil {
+		log.Error(err.Error())
+		os.Exit(1)
+	}
+
 	ctrl, err := ctrl.NewCtrl(ctrl.Option{
 		ConfigFile:    *configFile,
 		ContinueOnErr: *continueOnErr,
@@ -41,7 +48,7 @@ func main() {
 			Addr:    *addr,
 			Port:    *port,
 			Index:   *index,
-			SpecDir: *specdir,
+			SpecDir: specAbsPath,
 			Timeout: time.Duration(*timeout) * time.Second,
 		},
 		ExecFrom: *execFrom,
