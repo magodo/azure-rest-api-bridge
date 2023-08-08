@@ -194,8 +194,17 @@ func (srv *Server) synthResponse(r *http.Request, synthOpt *swagger.SynthesizerO
 	if err := exp.Expand(); err != nil {
 		return nil, nil, err
 	}
-	syn := swagger.NewSynthesizer(exp.Root(), &srv.rnd, synthOpt)
-	return syn.Synthesize(), exp.Root(), nil
+	propInstances := swagger.Monomorphization(exp.Root())
+	var results []interface{}
+	for _, propInstance := range propInstances {
+		propInstance := propInstance
+		syn, err := swagger.NewSynthesizer(&propInstance, &srv.rnd, synthOpt)
+		if err != nil {
+			return nil, nil, err
+		}
+		results = append(results, syn.Synthesize())
+	}
+	return results, exp.Root(), nil
 }
 
 func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error) {
