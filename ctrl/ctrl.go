@@ -301,10 +301,6 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		}
 	}
 
-	if ctrl.ContinueOnErr {
-		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execFail, "skip", execSkip)
-	}
-
 	if err := ctrl.WriteResult(ctx, results); err != nil {
 		log.Error("Write Result", "err", err.Error())
 		return err
@@ -314,6 +310,14 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	log.Info("Stopping the mock server")
 	if err := ctrl.MockServer.Stop(ctx); err != nil {
 		return err
+	}
+
+	if ctrl.ContinueOnErr {
+		log.Info("Summary", "total", execTotal, "succeed", execSucceed, "fail", execFail, "skip", execSkip)
+	}
+
+	if execFail > 0 {
+		return fmt.Errorf("%d execution failures encountered", execFail)
 	}
 
 	return nil
