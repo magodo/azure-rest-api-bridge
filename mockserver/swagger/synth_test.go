@@ -30,7 +30,7 @@ func TestSynthesize(t *testing.T) {
 		  "array": [
 		    "b"
 		  ],
-		  "boolean": false,
+		  "boolean": true,
 		  "emptyObject": {},
 		  "integer": 1,
 		  "map": {
@@ -73,7 +73,7 @@ func TestSynthesize(t *testing.T) {
 		    "b",
 			"c"
 		  ],
-		  "boolean": false,
+		  "boolean": true,
 		  "emptyObject": {},
 		  "integer": 1,
 		  "map": {
@@ -326,7 +326,8 @@ func TestSynthesize(t *testing.T) {
 				propInstance := v
 				syn, err := NewSynthesizer(&propInstance, ptr(NewRnd(nil)), tt.opt)
 				require.NoError(t, err)
-				res := syn.Synthesize()
+				res, ok := syn.Synthesize()
+				require.True(t, ok)
 				b, err := json.Marshal(res)
 				require.NoError(t, err)
 				require.JSONEq(t, tt.expect[i], string(b))

@@ -202,7 +202,9 @@ func (srv *Server) synthResponse(r *http.Request, synthOpt *swagger.SynthesizerO
 		if err != nil {
 			return nil, nil, err
 		}
-		results = append(results, syn.Synthesize())
+		if sv, ok := syn.Synthesize(); ok {
+			results = append(results, sv)
+		}
 	}
 	return results, exp.Root(), nil
 }

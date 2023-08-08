@@ -42,9 +42,9 @@ func NewSynthesizer(root *Property, rnd *Rnd, opt *SynthesizerOption) (*Synthesi
 	}, nil
 }
 
-func (syn *Synthesizer) Synthesize() interface{} {
-	var synProp func(parent, p *Property) interface{}
-	synProp = func(parent, p *Property) interface{} {
+func (syn *Synthesizer) Synthesize() (interface{}, bool) {
+	var synProp func(parent, p *Property) (interface{}, bool)
+	synProp = func(parent, p *Property) (interface{}, bool) {
 		switch {
 		case p.Element != nil:
 			n := 1
@@ -54,12 +54,13 @@ func (syn *Synthesizer) Synthesize() interface{} {
 
 			var elements []interface{}
 			for i := 0; i < n; i++ {
-				inner := synProp(p, p.Element)
-				elements = append(elements, inner)
+				if inner, ok := synProp(p, p.Element); ok {
+					elements = append(elements, inner)
+				}
 			}
 
 			if SchemaIsArray(p.Schema) {
-				return elements
+				return elements, true
 			} else {
 				// map
 				res := map[string]interface{}{}
@@ -71,12 +72,12 @@ func (syn *Synthesizer) Synthesize() interface{} {
 					inner := elements[i]
 					res[key] = inner
 				}
-				return res
+				return res, true
 			}
 		case p.Children != nil:
 			// empty object
 			if len(p.Children) == 0 {
-				return map[string]interface{}{}
+				return map[string]interface{}{}, true
 			} else {
 				res := map[string]interface{}{}
 				keys := make([]string, 0, len(p.Children))
@@ -85,9 +86,11 @@ func (syn *Synthesizer) Synthesize() interface{} {
 				}
 				sort.Strings(keys)
 				for _, k := range keys {
-					res[k] = synProp(p, p.Children[k])
+					if v, ok := synProp(p, p.Children[k]); ok {
+						res[k] = v
+					}
 				}
-				return res
+				return res, true
 			}
 		case p.Variant != nil:
 			for _, v := range p.Variant {
@@ -96,7 +99,7 @@ func (syn *Synthesizer) Synthesize() interface{} {
 			}
 		default:
 			if p.Schema == nil {
-				return nil
+				return nil, false
 			}
 			if len(p.Schema.Type) != 1 {
 				panic(fmt.Sprintf("%s: schema type as array is not supported", *p))
@@ -105,25 +108,26 @@ func (syn *Synthesizer) Synthesize() interface{} {
 			case "string":
 				if parent != nil && parent.Discriminator != "" && parent.Discriminator == p.Name() {
 					// discriminator property
-					return parent.DiscriminatorValue
+					return parent.DiscriminatorValue, true
 				} else {
 					// regular string
 					if syn.useEnumValues && len(p.Schema.Enum) != 0 {
-						return p.Schema.Enum[0].(string)
+						return p.Schema.Enum[0].(string), true
 					} else {
-						return syn.rnd.NextString(p.Schema.Format)
+						return syn.rnd.NextString(p.Schema.Format), true
 					}
 				}
 			case "file":
-				return syn.rnd.NextString(p.Schema.Format)
+				return syn.rnd.NextString(p.Schema.Format), true
 			case "integer":
-				return syn.rnd.NextInteger(p.Schema.Format)
+				return syn.rnd.NextInteger(p.Schema.Format), true
 			case "number":
-				return syn.rnd.NextNumber(p.Schema.Format)
+				return syn.rnd.NextNumber(p.Schema.Format), true
 			case "boolean":
-				return false
+				return true, true
 			case "object", "", "array":
 				// Returns nothing as this implies there is a circular ref hit
+				return nil, false
 			default:
 				panic(fmt.Sprintf("%s: unknown schema type %s", *p, t))
 			}
