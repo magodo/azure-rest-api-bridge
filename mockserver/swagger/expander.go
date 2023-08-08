@@ -13,11 +13,8 @@ import (
 )
 
 type Expander struct {
-	// Operation ref
-	ref  spec.Ref
 	root *Property
 
-	// This map is not initialized until the first time failed to resolve the model by the discriminator enum value.
 	// The key represents each swagger spec
 	variantMaps map[string]VariantMap
 
@@ -50,7 +47,6 @@ func NewExpander(ref spec.Ref, opt *ExpanderOption) (*Expander, error) {
 	}
 
 	return &Expander{
-		ref: ref,
 		root: &Property{
 			Schema:      psch,
 			ref:         ownRef,
@@ -378,7 +374,6 @@ func (e *Expander) expandPropAsRegularObject(prop *Property) error {
 			continue
 		}
 		tmpExp := Expander{
-			ref: ownRef,
 			root: &Property{
 				Schema:      schema,
 				RootModel:   prop.RootModel,
