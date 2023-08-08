@@ -124,27 +124,3 @@ func (prop Property) Name() string {
 func (prop Property) String() string {
 	return prop.addr.String()
 }
-
-// IsMono tests whether the Property is monomorphisized
-func (prop *Property) IsMono() bool {
-	if prop == nil {
-		return true
-	}
-	if !prop.Element.IsMono() {
-		return false
-	}
-	for _, child := range prop.Children {
-		if !child.IsMono() {
-			return false
-		}
-	}
-	if len(prop.Variant) > 1 {
-		return false
-	}
-	for _, variant := range prop.Variant {
-		if !variant.IsMono() {
-			return false
-		}
-	}
-	return true
-}
