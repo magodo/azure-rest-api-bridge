@@ -23,12 +23,12 @@ type Expander struct {
 	emptyObjAsStr bool
 
 	// Once specified, it will be used for expanding the property. If no hit, it will also update the cache accordingly.
-	cache *expanderCache
+	cache *ExpanderCache
 }
 
 type ExpanderOption struct {
 	EmptyObjAsStr bool
-	Cache         *expanderCache
+	Cache         *ExpanderCache
 }
 
 // NewExpander create a expander for the schema referenced by the input json reference.

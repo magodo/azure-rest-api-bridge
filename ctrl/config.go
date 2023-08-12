@@ -17,6 +17,12 @@ type Override struct {
 	SynthOption           *SynthOption      `hcl:"synthesizer,block"`
 }
 
+type Vibrate struct {
+	PathPattern string      `hcl:"path_pattern,attr"`
+	Path        string      `hcl:"path,attr"`
+	Value       interface{} `hcl:"value,attr"`
+}
+
 type Execution struct {
 	Name string `hcl:"name,label"`
 	Type string `hcl:"type,label"`
@@ -24,6 +30,7 @@ type Execution struct {
 	Skip       bool              `hcl:"skip,optional"`
 	SkipReason string            `hcl:"skip_reason,optional"`
 	Overrides  []Override        `hcl:"override,block"`
+	Vibrate    []Vibrate         `hcl:"vibrate,block"`
 	Env        map[string]string `hcl:"env,optional"`
 	Dir        string            `hcl:"dir,optional"`
 	Path       string            `hcl:"path,attr"`

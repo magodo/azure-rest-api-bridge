@@ -3,6 +3,8 @@ package swagger
 import (
 	"fmt"
 	"strings"
+
+	"github.com/go-openapi/jsonpointer"
 )
 
 type PropertyAddr []PropertyAddrStep
@@ -56,6 +58,24 @@ func (addr PropertyAddr) Equal(oaddr PropertyAddr) bool {
 		}
 	}
 	return true
+}
+
+func (addr PropertyAddr) ToPointer() (jsonpointer.Pointer, error) {
+	var tks []string
+	for _, step := range addr {
+		switch step.Type {
+		case PropertyAddrStepTypeIndex:
+			tks = append(tks, "0")
+		case PropertyAddrStepTypeProp:
+			tks = append(tks, step.Value)
+		case PropertyAddrStepTypeVariant:
+			continue
+		default:
+			panic(fmt.Sprintf("unknown step type: %d", step.Type))
+		}
+	}
+	ptrstr := "/" + strings.Join(tks, "/")
+	return jsonpointer.New(ptrstr)
 }
 
 func ParseAddr(input string) PropertyAddr {

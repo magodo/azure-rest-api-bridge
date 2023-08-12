@@ -9,7 +9,7 @@ import (
 func TestJSONValueMap(t *testing.T) {
 	cases := []struct {
 		name   string
-		input  interface{}
+		input  map[string]interface{}
 		expect map[string]string
 	}{
 		{

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,6 +35,11 @@ type Server struct {
 	rnd       swagger.Rnd
 	overrides Overrides
 	records   []swagger.JSONValue
+	seqs      []MonoModelDesc
+
+	// Following are sub-execution-based
+	vibration       *Vibration
+	vibrationRecord *swagger.JSONValue
 }
 
 type Overrides []Override
@@ -54,6 +60,12 @@ type Override struct {
 	ExpanderOption *swagger.ExpanderOption
 }
 
+type Vibration struct {
+	PathPattern regexp.Regexp
+	Path        string
+	Value       interface{}
+}
+
 func (ovs Overrides) Match(path string) *Override {
 	for _, ov := range ovs {
 		ov := ov
@@ -62,6 +74,15 @@ func (ovs Overrides) Match(path string) *Override {
 		}
 	}
 	return nil
+}
+
+// MonoModelDesc specifies a monomorphiszed API model.
+// It is mainly used to determine the API invocation sequence of one execution.
+type MonoModelDesc struct {
+	APIPath    string
+	APIVersion string
+	Operation  string
+	SelIndex   int
 }
 
 type Option struct {
@@ -117,8 +138,10 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Override response body, just return the hardcoded response body
 	if ov != nil && ov.ResponseBody != "" {
-		srv.setHeader(w, r, ov)
 		log.Debug("override", "type", "body", "url", r.URL.String(), "value", ov.ResponseBody)
+		// TODO: do we need to add the vibration, record, vibrationRecord for this case??
+		log.Debug("server handler", "response", ov.ResponseBody)
+		srv.setHeader(w, r, ov)
 		w.Write([]byte(ov.ResponseBody))
 		return
 	}
@@ -139,17 +162,25 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, err := srv.selResponse(resps, ov)
+	selIdx, responseBody, err := srv.selResponse(resps, ov)
 	if err != nil {
 		srv.writeError(w, err)
 		return
 	}
 
+	modelDesc := MonoModelDesc{
+		APIPath:    r.URL.Path,
+		APIVersion: r.URL.Query().Get("api-version"),
+		Operation:  r.Method,
+		SelIndex:   selIdx,
+	}
+	srv.seqs = append(srv.seqs, modelDesc)
+
 	if ov != nil {
 		switch {
 		case ov.ResponsePatchMerge != "":
 			log.Debug("override", "type", "merge patch", "url", r.URL.String(), "value", ov.ResponsePatchMerge)
-			b, err = jsonpatch.MergePatch(b, []byte(ov.ResponsePatchMerge))
+			responseBody, err = jsonpatch.MergePatch(responseBody, []byte(ov.ResponsePatchMerge))
 			if err != nil {
 				srv.writeError(w, err)
 				return
@@ -161,7 +192,7 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 				srv.writeError(w, err)
 				return
 			}
-			b, err = patch.Apply(b)
+			responseBody, err = patch.Apply(responseBody)
 			if err != nil {
 				srv.writeError(w, err)
 				return
@@ -169,17 +200,50 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	log.Debug("server handler", "response", string(b))
+	responseBody, err = srv.vibrateResponse(*r.URL, responseBody)
+	if err != nil {
+		srv.writeError(w, err)
+		return
+	}
 
-	v, err := swagger.UnmarshalJSONToJSONValue(b, expRoot)
+	v, err := swagger.UnmarshalJSONToJSONValue(responseBody, expRoot)
 	if err != nil {
 		srv.writeError(w, fmt.Errorf("unmarshal JSON to JSONValue: %v", err))
 		return
 	}
 	srv.records = append(srv.records, v)
+	srv.vibrationRecord = &v
+
+	log.Debug("server handler", "response", string(responseBody))
 	srv.setHeader(w, r, ov)
-	w.Write(b)
+	w.Write(responseBody)
+
 	return
+}
+
+func (srv *Server) vibrateResponse(uRL url.URL, response []byte) ([]byte, error) {
+	if srv.vibration == nil || !srv.vibration.PathPattern.MatchString(uRL.Path) {
+		return response, nil
+	}
+
+	vibratePatchRaw, err := json.Marshal(map[string]interface{}{
+		"op":    "replace",
+		"path":  srv.vibration.Path,
+		"value": srv.vibration.Value,
+	})
+	if err != nil {
+		return nil, err
+	}
+	patch, err := jsonpatch.DecodePatch(vibratePatchRaw)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("vibrate", "url", uRL, "patch", string(vibratePatchRaw))
+	b, err := patch.Apply(response)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func (srv *Server) synthResponse(r *http.Request, synthOpt *swagger.SynthesizerOption, expanderOpt *swagger.ExpanderOption) ([]interface{}, *swagger.Property, error) {
@@ -194,11 +258,11 @@ func (srv *Server) synthResponse(r *http.Request, synthOpt *swagger.SynthesizerO
 	if err := exp.Expand(); err != nil {
 		return nil, nil, err
 	}
-	propInstances := swagger.Monomorphization(exp.Root())
+	modelInstances := swagger.Monomorphization(exp.Root())
 	var results []interface{}
-	for _, propInstance := range propInstances {
-		propInstance := propInstance
-		syn, err := swagger.NewSynthesizer(&propInstance, &srv.rnd, synthOpt)
+	for _, modelInstance := range modelInstances {
+		modelInstance := modelInstance
+		syn, err := swagger.NewSynthesizer(&modelInstance, &srv.rnd, synthOpt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -209,13 +273,14 @@ func (srv *Server) synthResponse(r *http.Request, synthOpt *swagger.SynthesizerO
 	return results, exp.Root(), nil
 }
 
-func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error) {
+func (srv *Server) selResponse(resps []interface{}, ov *Override) (int, []byte, error) {
 	if len(resps) == 0 {
-		return nil, fmt.Errorf("no responses to select")
+		return 0, nil, fmt.Errorf("no responses to select")
 	}
 
 	if len(resps) == 1 {
-		return json.Marshal(resps[0])
+		b, err := json.Marshal(resps[0])
+		return 0, b, err
 	}
 
 	logDiff := func(resps [][]byte) {
@@ -231,12 +296,12 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 		log.Warn(fmt.Sprintf("select the 1st response from %d", len(resps)))
 		b1, err := json.Marshal(resps[0])
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		if b2, err := json.Marshal(resps[1]); err == nil {
 			logDiff([][]byte{b1, b2})
 		}
-		return b1, nil
+		return 0, b1, nil
 	}
 
 	selector := ov.ResponseSelectorMerge
@@ -244,11 +309,16 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 		selector = ov.ResponseSelectorJSON
 	}
 
-	var candidates [][]byte
-	for _, resp := range resps {
+	type candidateInfo struct {
+		idx int
+		b   []byte
+	}
+
+	var candidates []candidateInfo
+	for idx, resp := range resps {
 		bOld, err := json.Marshal(resp)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 
 		log.Debug("override", "type", "selector", "sel", selector, "resp", string(bOld))
@@ -262,30 +332,33 @@ func (srv *Server) selResponse(resps []interface{}, ov *Override) ([]byte, error
 		} else {
 			patch, err := jsonpatch.DecodePatch([]byte(ov.ResponseSelectorJSON))
 			if err != nil {
-				return nil, fmt.Errorf("decoding response selector json patch: %v", err)
+				return 0, nil, fmt.Errorf("decoding response selector json patch: %v", err)
 			}
 			bNew, err = patch.Apply(bOld)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("applying response selector patch: %v", err)
+			return 0, nil, fmt.Errorf("applying response selector patch: %v", err)
 		}
 
 		if string(bOld) == string(bNew) {
-			candidates = append(candidates, bOld)
+			candidates = append(candidates, candidateInfo{
+				idx: idx,
+				b:   bOld,
+			})
 		}
 	}
 
 	if len(candidates) == 0 {
-		return nil, fmt.Errorf("no synth response found with the response selector: %s", selector)
+		return 0, nil, fmt.Errorf("no synth response found with the response selector: %s", selector)
 	}
 
 	if len(candidates) > 1 {
 		log.Warn(fmt.Sprintf("select the 1st response from %d (after selection)", len(candidates)))
-		logDiff(candidates)
-		return candidates[0], nil
+		logDiff([][]byte{candidates[0].b, candidates[1].b})
+		return candidates[0].idx, candidates[0].b, nil
 	}
 
-	return candidates[0], nil
+	return candidates[0].idx, candidates[0].b, nil
 }
 
 func (srv *Server) handleToken(w http.ResponseWriter, r *http.Request) {
@@ -361,10 +434,25 @@ func (srv *Server) Stop(ctx context.Context) error {
 // InitExecution initiates for each execution, for resetting the overrides and the rnd.
 func (srv *Server) InitExecution(ov []Override) {
 	srv.overrides = ov
-	srv.rnd = swagger.NewRnd(nil)
+	srv.InitVibrate(nil)
+}
+
+func (srv *Server) InitVibrate(vibrate *Vibration) {
 	srv.records = nil
+	srv.rnd = swagger.NewRnd(nil)
+	srv.vibration = vibrate
+	srv.vibrationRecord = nil
+	srv.seqs = nil
 }
 
 func (srv *Server) Records() []swagger.JSONValue {
 	return srv.records
+}
+
+func (srv *Server) VibrationRecord() *swagger.JSONValue {
+	return srv.vibrationRecord
+}
+
+func (srv *Server) Sequences() []MonoModelDesc {
+	return srv.seqs
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/go-openapi/jsonreference"
 	"github.com/magodo/azure-rest-api-bridge/mockserver/swagger"
 	"github.com/magodo/jsonpointerpos"
+	"golang.org/x/exp/maps"
 )
 
 // SingleModelMap maps a jsonpointer of a property in the application model to a property *definition* in the API model spec
@@ -89,7 +90,7 @@ func (m SingleModelMap) RelativeLocalLink(specdir string) error {
 	return nil
 }
 
-func MapSingleAppModel(appModel interface{}, apiModels ...swagger.JSONValue) (SingleModelMap, error) {
+func MapSingleAppModel(appModel map[string]interface{}, apiModels ...swagger.JSONValue) (SingleModelMap, error) {
 	apiValueMap, err := swagger.JSONValueValueMap(apiModels...)
 	if err != nil {
 		return nil, fmt.Errorf("building value map for API models: %v", err)
@@ -138,7 +139,7 @@ func NewModelMap(models []SingleModelMap) ModelMap {
 }
 
 // jsonValueMap flattens a JSON object to a single level k-v map that mapps the jsonpointer to each property to the strings representation of its value, and reverse the keys and values to be a value map.
-func jsonValueMap(m interface{}) map[string]string {
+func jsonValueMap(m map[string]interface{}) map[string]string {
 	out := map[string]string{}
 	dupm := map[string]bool{}
 
@@ -154,6 +155,27 @@ func jsonValueMap(m interface{}) map[string]string {
 		out[k] = v
 	}
 
+	m = flattenJSON(m)
+	for k, val := range m {
+		switch val := val.(type) {
+		case float64:
+			tryStore(strconv.FormatFloat(val, 'g', -1, 64), k)
+		case string:
+			tryStore(val, k)
+		case bool:
+			v := "FALSE"
+			if val {
+				v = "TRUE"
+			}
+			tryStore(v, k)
+		}
+	}
+	return out
+}
+
+// flattenJSON flattens a JSON object to a single level k-v map that mapps the jsonpointer to each property's value,
+func flattenJSON(m map[string]interface{}) map[string]interface{} {
+	out := map[string]interface{}{}
 	fn := func(val interface{}, tks []string) {
 		etks := make([]string, 0, len(tks))
 		for _, tk := range tks {
@@ -161,21 +183,11 @@ func jsonValueMap(m interface{}) map[string]string {
 		}
 		ptr, _ := jsonpointer.New("/" + strings.Join(etks, "/"))
 		switch val := val.(type) {
-		case float64:
-			tryStore(strconv.FormatFloat(val, 'g', -1, 64), ptr.String())
-		case string:
-			tryStore(val, ptr.String())
-		case bool:
-			v := "FALSE"
-			if val {
-				v = "TRUE"
-			}
-			tryStore(v, ptr.String())
+		case float64, string, bool:
+			out[ptr.String()] = val
 		}
 	}
-
 	walkJSON(m, []string{}, fn)
-
 	return out
 }
 
@@ -195,6 +207,31 @@ func walkJSON(node interface{}, ptks []string, fn func(node interface{}, ptrtks 
 		}
 	default:
 		fn(node, ptks)
+	}
+	return
+}
+
+// compareFlattendJSON compares two flattend JSON object and returns:
+// - Properties only exist in the 1st object
+// - Properties only exist in the 2nd object
+// - Properties exist in both objects, but their values are different
+// The elements of all the returned slice are the JSON pointer of the properties.
+func compareFlattendJSON(m1, m2 map[string]interface{}) (l1 []string, l2 []string, ldiff []string) {
+	for _, key := range append(maps.Keys(m1), maps.Keys(m2)...) {
+		v1, ok1 := m1[key]
+		v2, ok2 := m2[key]
+		if !ok1 {
+			l2 = append(l2, key)
+			continue
+		}
+		if !ok2 {
+			l1 = append(l1, key)
+			continue
+		}
+		if ok1 && ok2 && v1 != v2 {
+			ldiff = append(ldiff, key)
+			continue
+		}
 	}
 	return
 }
