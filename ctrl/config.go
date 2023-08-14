@@ -1,5 +1,7 @@
 package ctrl
 
+import "github.com/zclconf/go-cty/cty"
+
 type Config struct {
 	Overrides  []Override  `hcl:"override,block"`
 	Executions []Execution `hcl:"execution,block"`
@@ -17,10 +19,10 @@ type Override struct {
 	SynthOption           *SynthOption      `hcl:"synthesizer,block"`
 }
 
-type Vibrate struct {
-	PathPattern string      `hcl:"path_pattern,attr"`
-	Path        string      `hcl:"path,attr"`
-	Value       interface{} `hcl:"value,attr"`
+type Vibration struct {
+	PathPattern string    `hcl:"path_pattern,attr"`
+	Path        string    `hcl:"path,attr"`
+	Value       cty.Value `hcl:"value,attr"`
 }
 
 type Execution struct {
@@ -30,7 +32,7 @@ type Execution struct {
 	Skip       bool              `hcl:"skip,optional"`
 	SkipReason string            `hcl:"skip_reason,optional"`
 	Overrides  []Override        `hcl:"override,block"`
-	Vibrate    []Vibrate         `hcl:"vibrate,block"`
+	Vibrate    []Vibration       `hcl:"vibrate,block"`
 	Env        map[string]string `hcl:"env,optional"`
 	Dir        string            `hcl:"dir,optional"`
 	Path       string            `hcl:"path,attr"`

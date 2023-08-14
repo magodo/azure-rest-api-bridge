@@ -117,17 +117,29 @@ func validateExecSpec(spec Config) error {
 		return nil
 	}
 
+	validateVibrate := func(vibrations []Vibration) error {
+		for _, vib := range vibrations {
+			if !vib.Value.Type().IsPrimitiveType() {
+				return fmt.Errorf("vibration's `value` must be a primitive")
+			}
+		}
+		return nil
+	}
+
 	if err := validateOverride(spec.Overrides); err != nil {
 		return err
 	}
 
 	execNames := map[string]map[string]bool{}
-	for _, exec := range spec.Executions {
+	for i, exec := range spec.Executions {
 		if exec.Skip && exec.SkipReason == "" {
-			return fmt.Errorf("skipped execution %s must have a skip_reason", exec)
+			return fmt.Errorf("%d: skipped execution %s must have a skip_reason", i, exec)
 		}
 		if err := validateOverride(exec.Overrides); err != nil {
-			return err
+			return fmt.Errorf("%d: %v", i, err)
+		}
+		if err := validateVibrate(exec.Vibrate); err != nil {
+			return fmt.Errorf("%d: %v", i, err)
 		}
 		m, ok := execNames[exec.Name]
 		if !ok {
@@ -135,7 +147,7 @@ func validateExecSpec(spec Config) error {
 			execNames[exec.Name] = m
 		}
 		if m[exec.Type] {
-			return fmt.Errorf("duplicated execution %s", exec)
+			return fmt.Errorf("%d duplicated execution %s", i, exec)
 		}
 		m[exec.Type] = true
 	}
@@ -287,19 +299,19 @@ func (ctrl *Ctrl) execute(ctx context.Context, execution Execution, execIdx, exe
 
 	ctrl.MockServer.InitExecution(ovs)
 
-	appModel, err := ctrl.runCommand(ctx, execution, execIdx, execTotal, 0, 0)
+	appJSON, err := ctrl.runCommand(ctx, execution, execIdx, execTotal, 0, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	m, err := MapSingleAppModel(appModel, ctrl.MockServer.Records()...)
+	m, err := MapSingleAppModel(appJSON, ctrl.MockServer.Records()...)
 	if err != nil {
 		log.Error("post-execution map models", "error", err)
 		return nil, fmt.Errorf("post-execution %q map models: %v", execution, err)
 	}
 
 	base := BaseExecInfo{
-		appJSON: appModel,
+		appJSON: appJSON,
 		seq:     ctrl.MockServer.Sequences(),
 	}
 
@@ -348,33 +360,32 @@ func (ctrl *Ctrl) runCommand(ctx context.Context, execution Execution, execIdx, 
 		Stderr: &stderr,
 	}
 
-	vibrateMsg := func(vibrateIdx, vibrateTotal int) string {
-		if vibrateTotal == 0 {
-			return ""
-		}
-		return fmt.Sprintf(" by vibrating (%d/%d)", vibrateIdx+1, vibrateTotal)
+	var vibrateMsg string
+	if vibrateTotal != 0 {
+		vibrateMsg = fmt.Sprintf(" with vibration (%d/%d)", vibrateIdx+1, vibrateTotal)
 	}
 
-	log.Info(fmt.Sprintf("Executing %s (%d/%d)%s", execution, execIdx+1, execTotal, vibrateMsg(vibrateIdx, vibrateTotal)))
+	log.Info(fmt.Sprintf("Executing %s (%d/%d)%s", execution, execIdx+1, execTotal, vibrateMsg))
 
+	// Only output the debug information for the regular execution
 	if vibrateTotal == 0 {
 		log.Debug("execution detail", "path", execution.Path, "args", execution.Args, "env", env, "dir", execution.Dir)
 	}
 
 	if err := cmd.Run(); err != nil {
 		log.Error("run failure", "stdout", stdout.String(), "stderr", stderr.String())
-		return nil, fmt.Errorf("running execution %q%s: %v", execution, vibrateMsg(vibrateIdx, vibrateTotal), err)
+		return nil, fmt.Errorf("running execution %q%s: %v", execution, vibrateMsg, err)
 	}
 
 	log.Debug("execution result", "stdout", stdout.String())
 
-	var appModel map[string]interface{}
-	if err := json.Unmarshal(stdout.Bytes(), &appModel); err != nil {
-		log.Error(fmt.Sprintf("post-execution%s unmarshal failure", vibrateMsg(vibrateIdx, vibrateTotal)), "error", err, "stdout", stdout.String())
-		return nil, fmt.Errorf("post-execution %q%s unmarshal: %v", execution, vibrateMsg(vibrateIdx, vibrateTotal), err)
+	var appJSON map[string]interface{}
+	if err := json.Unmarshal(stdout.Bytes(), &appJSON); err != nil {
+		log.Error(fmt.Sprintf("post-execution %q%s unmarshal failure", execution, vibrateMsg), "error", err, "stdout", stdout.String())
+		return nil, fmt.Errorf("post-execution %q%s unmarshal: %v", execution, vibrateMsg, err)
 	}
 
-	return appModel, nil
+	return appJSON, nil
 }
 
 type BaseExecInfo struct {
@@ -383,14 +394,26 @@ type BaseExecInfo struct {
 }
 
 // vibrate runs a vibration execution and compares it with the base execution and returns a model mapping.
-func (ctrl *Ctrl) vibrate(ctx context.Context, execution Execution, vibrate Vibrate, base BaseExecInfo, execIdx, execTotal int, vibrateIdx, vibrateTotal int) (SingleModelMap, error) {
-	ctrl.MockServer.InitVibrate(&mockserver.Vibration{
-		PathPattern: *regexp.MustCompile(vibrate.PathPattern),
-		Path:        vibrate.Path,
-		Value:       vibrate.Value,
-	})
+func (ctrl *Ctrl) vibrate(ctx context.Context, execution Execution, vibration Vibration, base BaseExecInfo, execIdx, execTotal int, vibrateIdx, vibrateTotal int) (SingleModelMap, error) {
+	var value interface{}
+	vv := vibration.Value
+	switch {
+	case vv.Type().Equals(cty.Number):
+		value, _ = vv.AsBigFloat().Float64()
+	case vv.Type().Equals(cty.Bool):
+		value = vv.True()
+	case vv.Type().Equals(cty.String):
+		value = vv.AsString()
+	}
+	ctrl.MockServer.InitVibration(
+		&mockserver.Vibration{
+			PathPattern: *regexp.MustCompile(vibration.PathPattern),
+			Path:        vibration.Path,
+			Value:       value,
+		},
+	)
 
-	vibrateAppModel, err := ctrl.runCommand(ctx, execution, execIdx, execTotal, vibrateIdx, vibrateTotal)
+	vibrateAppJSON, err := ctrl.runCommand(ctx, execution, execIdx, execTotal, vibrateIdx, vibrateTotal)
 	if err != nil {
 		return nil, err
 	}
@@ -401,9 +424,9 @@ func (ctrl *Ctrl) vibrate(ctx context.Context, execution Execution, vibrate Vibr
 		return nil, fmt.Errorf("API invocation sequence not matched between the basic execution and the %d-th vibrated execution", vibrateIdx)
 	}
 
-	fltAppModel := flattenJSON(base.appJSON)
-	fltVibrateAppModel := flattenJSON(vibrateAppModel)
-	l1, l2, ldiff := compareFlattendJSON(fltAppModel, fltVibrateAppModel)
+	fltAppJSON := flattenJSON(base.appJSON)
+	fltVibrateAppJSON := flattenJSON(vibrateAppJSON)
+	l1, l2, ldiff := compareFlattendJSON(fltAppJSON, fltVibrateAppJSON)
 	if len(l1)+len(l2)+len(ldiff) == 0 {
 		log.Warn("Vibration causes no diff vs base model")
 		return nil, nil
@@ -440,10 +463,10 @@ func (ctrl *Ctrl) vibrate(ctx context.Context, execution Execution, vibrate Vibr
 		if err != nil {
 			return nil, err
 		}
-		if ptr.String() != vibrate.Path {
+		if ptr.String() != vibration.Path {
 			continue
 		}
 		return SingleModelMap{appPropAddr: v.JSONValuePos()}, nil
 	}
-	return nil, fmt.Errorf("failed to find a leaf property address %s in the vibration model", vibrate.Path)
+	return nil, fmt.Errorf("failed to find a leaf property address %s in the vibration model", vibration.Path)
 }

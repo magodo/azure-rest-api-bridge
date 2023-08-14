@@ -200,7 +200,8 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	responseBody, err = srv.vibrateResponse(*r.URL, responseBody)
+	var vibrateOK bool
+	responseBody, vibrateOK, err = srv.vibrateResponse(*r.URL, responseBody)
 	if err != nil {
 		srv.writeError(w, err)
 		return
@@ -212,7 +213,10 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	srv.records = append(srv.records, v)
-	srv.vibrationRecord = &v
+
+	if vibrateOK {
+		srv.vibrationRecord = &v
+	}
 
 	log.Debug("server handler", "response", string(responseBody))
 	srv.setHeader(w, r, ov)
@@ -221,29 +225,31 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (srv *Server) vibrateResponse(uRL url.URL, response []byte) ([]byte, error) {
+func (srv *Server) vibrateResponse(uRL url.URL, response []byte) ([]byte, bool, error) {
 	if srv.vibration == nil || !srv.vibration.PathPattern.MatchString(uRL.Path) {
-		return response, nil
+		return response, false, nil
 	}
 
-	vibratePatchRaw, err := json.Marshal(map[string]interface{}{
-		"op":    "replace",
-		"path":  srv.vibration.Path,
-		"value": srv.vibration.Value,
+	vibratePatchRaw, err := json.Marshal([]map[string]interface{}{
+		{
+			"op":    "replace",
+			"path":  srv.vibration.Path,
+			"value": srv.vibration.Value,
+		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	patch, err := jsonpatch.DecodePatch(vibratePatchRaw)
 	if err != nil {
-		return nil, err
+		return nil, false, fmt.Errorf("decoding patch %v: %v", string(vibratePatchRaw), err)
 	}
 	log.Debug("vibrate", "url", uRL, "patch", string(vibratePatchRaw))
 	b, err := patch.Apply(response)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return b, nil
+	return b, true, nil
 }
 
 func (srv *Server) synthResponse(r *http.Request, synthOpt *swagger.SynthesizerOption, expanderOpt *swagger.ExpanderOption) ([]interface{}, *swagger.Property, error) {
@@ -434,10 +440,10 @@ func (srv *Server) Stop(ctx context.Context) error {
 // InitExecution initiates for each execution, for resetting the overrides and the rnd.
 func (srv *Server) InitExecution(ov []Override) {
 	srv.overrides = ov
-	srv.InitVibrate(nil)
+	srv.InitVibration(nil)
 }
 
-func (srv *Server) InitVibrate(vibrate *Vibration) {
+func (srv *Server) InitVibration(vibrate *Vibration) {
 	srv.records = nil
 	srv.rnd = swagger.NewRnd(nil)
 	srv.vibration = vibrate

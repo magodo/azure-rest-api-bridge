@@ -217,7 +217,11 @@ func walkJSON(node interface{}, ptks []string, fn func(node interface{}, ptrtks 
 // - Properties exist in both objects, but their values are different
 // The elements of all the returned slice are the JSON pointer of the properties.
 func compareFlattendJSON(m1, m2 map[string]interface{}) (l1 []string, l2 []string, ldiff []string) {
+	m := map[string]bool{}
 	for _, key := range append(maps.Keys(m1), maps.Keys(m2)...) {
+		m[key] = true
+	}
+	for key := range m {
 		v1, ok1 := m1[key]
 		v2, ok2 := m2[key]
 		if !ok1 {
