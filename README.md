@@ -131,11 +131,6 @@ Each `execution` block is defined below:
 
 ```hcl
 execution "name" "type" {
-    # 0 or more override blocks, that only applies to this execution
-    override {
-        #...
-    }
-
     # additional environment variables for this execution
     env = {
         #...
@@ -151,6 +146,16 @@ execution "name" "type" {
     args = [
         #...
     ]
+
+    # 0 or more override blocks, that only applies to this execution
+    override {
+        #...
+    }
+
+    # 0 or more vibrate blocks, that only applies to this execution
+    vibrate {
+        #...
+    }
 }
 ```
 
@@ -216,6 +221,18 @@ Each `duplicate_element` block is defined below:
 duplicate_element {
     count = 1       # (Optional) The count of duplications. By default, 1.
     addr  = "..."   # The address to the property to duplicate, see `PropertyAddr` for the correct format
+}
+```
+
+---
+
+Each `vibrate` block is defined below:
+
+```hcl
+vibrate {
+    path_pattern = "..." # regexp of the API path pattern, if it is matched against the request sent to the mock server, it will modify the response per the settings defined in this block
+    path = "..."         # The JSON pointer references an *leaf* location within the response (after override), who is of a primary type
+    value = "..."        # The value to be applied to above path, which should be different than its original value (the override response)
 }
 ```
 
