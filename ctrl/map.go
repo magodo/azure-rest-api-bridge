@@ -20,76 +20,6 @@ import (
 // encountered a circular reference during its expansion, the value of the map is nil.
 type SingleModelMap map[string]*swagger.JSONValuePos
 
-// AddLink adds the LinkLocal and LinkGithuhub for each value (*swagger.JSONValuePos) of the SignleModelMap.
-func (m SingleModelMap) AddLink(commit, specdir string) error {
-	pm := map[string][]jsonpointer.Pointer{}
-	for k, v := range m {
-		if v == nil {
-			// We deliberately not nil checking `jsonpos` here, as the response is generated with the guarantee that no circular/undefined property will be generated.
-			// In other words, the jsonpos here must be non-nil. Otherwise, it indicates a bug in the code.
-			return fmt.Errorf("unexpected nil JSONValuePos got for %s, this is either a code bug or user usage error", k)
-		}
-		filepath := v.Ref.GetURL().Path
-		pm[filepath] = append(pm[filepath], *v.Ref.GetPointer())
-	}
-	posm := map[string]map[string]jsonpointerpos.JSONPointerPosition{}
-	for fpath, ptrs := range pm {
-		b, err := os.ReadFile(fpath)
-		if err != nil {
-			return fmt.Errorf("reading %s: %v", fpath, err)
-		}
-		posResult, err := jsonpointerpos.GetPositions(string(b), ptrs)
-		if err != nil {
-			return err
-		}
-		posm[fpath] = posResult
-	}
-	for _, v := range m {
-		fpath := v.Ref.GetURL().Path
-		relFile, err := filepath.Rel(specdir, fpath)
-		if err != nil {
-			return err
-		}
-		pos, ok := posm[fpath][v.Ref.GetPointer().String()]
-		if !ok {
-			return fmt.Errorf("can't find file position for %s", &v.Ref)
-		}
-		v.LinkLocal = fmt.Sprintf("%s:%d:%d", fpath, pos.Line, pos.Column)
-		if commit != "" {
-			v.LinkGithub = "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(pos.Line)
-		}
-	}
-	return nil
-}
-
-func (m SingleModelMap) RelativeLocalLink(specdir string) error {
-	for _, pos := range m {
-		if pos.Ref.GetURL() != nil {
-			path, err := filepath.Rel(specdir, pos.Ref.GetURL().Path)
-			if err != nil {
-				return err
-			}
-			pos.Ref = jsonreference.MustCreateRef(path + "#" + pos.Ref.GetPointer().String())
-		}
-		if pos.LinkLocal != "" {
-			parts := strings.SplitN(pos.LinkLocal, ":", 2)
-			path, err := filepath.Rel(specdir, parts[0])
-			if err != nil {
-				return err
-			}
-			pos.LinkLocal = path + ":" + parts[1]
-		}
-		if ref := pos.RootModel.PathRef; ref.GetURL() != nil {
-			path, err := filepath.Rel(specdir, ref.GetURL().Path)
-			if err != nil {
-				return err
-			}
-			pos.RootModel.PathRef = jsonreference.MustCreateRef(path + "#" + ref.GetPointer().String())
-		}
-	}
-	return nil
-}
-
 func MapSingleAppModel(appModel map[string]interface{}, apiModels ...swagger.JSONValue) (SingleModelMap, error) {
 	apiValueMap, err := swagger.JSONValueValueMap(apiModels...)
 	if err != nil {
@@ -107,23 +37,36 @@ func MapSingleAppModel(appModel map[string]interface{}, apiModels ...swagger.JSO
 	return m, nil
 }
 
+func (smm SingleModelMap) ToModelMap() ModelMap {
+	m := ModelMap{}
+	for k, v := range smm {
+		m[k] = []*swagger.JSONValuePos{v}
+	}
+	return m
+}
+
 // ModelMap is same as SingleModelMap, but might maps one app model property to multiple API model properties.
 // This is resulted from merging multiple SingleModelMap(s).
 type ModelMap map[string][]*swagger.JSONValuePos
 
-func NewModelMap(models []SingleModelMap) ModelMap {
+func (mm ModelMap) Add(omm ModelMap) ModelMap {
 	tmpM := map[string]map[string]*swagger.JSONValuePos{}
-	for _, model := range models {
-		for k, v := range model {
+	for k, poses := range mm {
+		for _, pos := range poses {
+			tmpM[k] = map[string]*swagger.JSONValuePos{pos.String(): pos}
+		}
+	}
+	for k, poses := range omm {
+		for _, pos := range poses {
 			m, ok := tmpM[k]
 			if !ok {
 				m = map[string]*swagger.JSONValuePos{}
 				tmpM[k] = m
 			}
-			// We use API property address as the unique key
-			m[v.Addr.String()] = v
+			m[pos.String()] = pos
 		}
 	}
+
 	result := ModelMap{}
 	for k, m := range tmpM {
 		var l []*swagger.JSONValuePos
@@ -136,6 +79,82 @@ func NewModelMap(models []SingleModelMap) ModelMap {
 		result[k] = l
 	}
 	return result
+}
+
+// AddLink adds the LinkLocal and LinkGithuhub for each value (*swagger.JSONValuePos) of the ModelMap.
+func (m ModelMap) AddLink(commit, specdir string) error {
+	pm := map[string][]jsonpointer.Pointer{}
+	for k, poses := range m {
+		for _, pos := range poses {
+			if pos == nil {
+				// We deliberately not nil checking `jsonpos` here, as the response is generated with the guarantee that no circular/undefined property will be generated.
+				// In other words, the jsonpos here must be non-nil. Otherwise, it indicates a bug in the code.
+				return fmt.Errorf("unexpected nil JSONValuePos got for %s, this is either a code bug or user usage error", k)
+			}
+			filepath := pos.Ref.GetURL().Path
+			pm[filepath] = append(pm[filepath], *pos.Ref.GetPointer())
+		}
+	}
+	posm := map[string]map[string]jsonpointerpos.JSONPointerPosition{}
+	for fpath, ptrs := range pm {
+		b, err := os.ReadFile(fpath)
+		if err != nil {
+			return fmt.Errorf("reading %s: %v", fpath, err)
+		}
+		posResult, err := jsonpointerpos.GetPositions(string(b), ptrs)
+		if err != nil {
+			return err
+		}
+		posm[fpath] = posResult
+	}
+	for _, poses := range m {
+		for _, pos := range poses {
+			fpath := pos.Ref.GetURL().Path
+			relFile, err := filepath.Rel(specdir, fpath)
+			if err != nil {
+				return err
+			}
+			jsonpos, ok := posm[fpath][pos.Ref.GetPointer().String()]
+			if !ok {
+				return fmt.Errorf("can't find file position for %s", &pos.Ref)
+			}
+			pos.LinkLocal = fmt.Sprintf("%s:%d:%d", fpath, jsonpos.Line, jsonpos.Column)
+			if commit != "" {
+				pos.LinkGithub = "https://github.com/Azure/azure-rest-api-specs/blob/" + commit + "/specification/" + relFile + "#L" + strconv.Itoa(jsonpos.Line)
+			}
+		}
+	}
+	return nil
+}
+
+func (m ModelMap) RelativeLocalLink(specdir string) error {
+	for _, poses := range m {
+		for _, pos := range poses {
+			if pos.Ref.GetURL() != nil {
+				path, err := filepath.Rel(specdir, pos.Ref.GetURL().Path)
+				if err != nil {
+					return err
+				}
+				pos.Ref = jsonreference.MustCreateRef(path + "#" + pos.Ref.GetPointer().String())
+			}
+			if pos.LinkLocal != "" {
+				parts := strings.SplitN(pos.LinkLocal, ":", 2)
+				path, err := filepath.Rel(specdir, parts[0])
+				if err != nil {
+					return err
+				}
+				pos.LinkLocal = path + ":" + parts[1]
+			}
+			if ref := pos.RootModel.PathRef; ref.GetURL() != nil {
+				path, err := filepath.Rel(specdir, ref.GetURL().Path)
+				if err != nil {
+					return err
+				}
+				pos.RootModel.PathRef = jsonreference.MustCreateRef(path + "#" + ref.GetPointer().String())
+			}
+		}
+	}
+	return nil
 }
 
 // jsonValueMap flattens a JSON object to a single level k-v map that mapps the jsonpointer to each property to the strings representation of its value, and reverse the keys and values to be a value map.

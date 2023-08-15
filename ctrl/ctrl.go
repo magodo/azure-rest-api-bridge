@@ -162,7 +162,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 		return err
 	}
 
-	results := map[string][]SingleModelMap{}
+	results := map[string]ModelMap{}
 
 	execTotal := len(ctrl.ExecSpec.Executions)
 	execSkip := 0
@@ -208,7 +208,7 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 			return err
 		} else {
 			execSucceed++
-			results[execution.Name] = append(results[execution.Name], *m)
+			results[execution.Name] = results[execution.Name].Add(m)
 		}
 	}
 
@@ -234,13 +234,8 @@ func (ctrl *Ctrl) Run(ctx context.Context) error {
 	return nil
 }
 
-func (ctrl *Ctrl) WriteResult(ctx context.Context, results map[string][]SingleModelMap) error {
-	outputs := map[string]ModelMap{}
-	for execName, models := range results {
-		outputs[execName] = NewModelMap(models)
-	}
-
-	b, err := json.MarshalIndent(outputs, "", "  ")
+func (ctrl *Ctrl) WriteResult(ctx context.Context, results map[string]ModelMap) error {
+	b, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshalling output: %v", err)
 	}
@@ -249,7 +244,7 @@ func (ctrl *Ctrl) WriteResult(ctx context.Context, results map[string][]SingleMo
 	return nil
 }
 
-func (ctrl *Ctrl) execute(ctx context.Context, execution Execution, execIdx, execTotal int) (*SingleModelMap, error) {
+func (ctrl *Ctrl) execute(ctx context.Context, execution Execution, execIdx, execTotal int) (ModelMap, error) {
 	overrides := append([]Override{}, execution.Overrides...)
 	overrides = append(overrides, ctrl.ExecSpec.Overrides...)
 
@@ -310,36 +305,32 @@ func (ctrl *Ctrl) execute(ctx context.Context, execution Execution, execIdx, exe
 		return nil, fmt.Errorf("post-execution %q map models: %v", execution, err)
 	}
 
+	mm := m.ToModelMap()
+
 	base := BaseExecInfo{
 		appJSON: appJSON,
 		seq:     ctrl.MockServer.Sequences(),
 	}
 
 	for i, vibrate := range execution.Vibrate {
-		mm, err := ctrl.vibrate(ctx, execution, vibrate, base, execIdx, execTotal, i, len(execution.Vibrate))
+		m, err := ctrl.vibrate(ctx, execution, vibrate, base, execIdx, execTotal, i, len(execution.Vibrate))
 		if err != nil {
 			log.Error("post-execution vibration execution", "error", err)
 			return nil, fmt.Errorf("post-execution vibration execution: %v", err)
 		}
-		for k, v := range mm {
-			if _, ok := m[k]; !ok {
-				m[k] = v
-			} else {
-				log.Warn("The %d-th vibration is redundent", i)
-			}
-		}
+		mm = mm.Add(m.ToModelMap())
 	}
 
-	if err := m.AddLink(ctrl.MockServer.Idx.Commit, ctrl.MockServer.Specdir); err != nil {
+	if err := mm.AddLink(ctrl.MockServer.Idx.Commit, ctrl.MockServer.Specdir); err != nil {
 		log.Error("post-execution model map adding link", "error", err)
 		return nil, fmt.Errorf("post-execution model map adding link: %v", err)
 	}
-	if err := m.RelativeLocalLink(ctrl.MockServer.Specdir); err != nil {
+	if err := mm.RelativeLocalLink(ctrl.MockServer.Specdir); err != nil {
 		log.Error("post-execution model map relative local link", "error", err)
 		return nil, fmt.Errorf("post-execution model map relative local link: %v", err)
 	}
 
-	return &m, nil
+	return mm, nil
 }
 
 func (ctrl *Ctrl) runCommand(ctx context.Context, execution Execution, execIdx, execTotal int, vibrateIdx, vibrateTotal int) (map[string]interface{}, error) {

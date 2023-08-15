@@ -90,6 +90,10 @@ type JSONValuePos struct {
 	LinkGithub string            `json:"link_github,omitempty"`
 }
 
+func (pos JSONValuePos) String() string {
+	return pos.RootModel.String() + ":" + pos.Addr.String()
+}
+
 func (pos JSONValuePos) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{
 		"root_model":  pos.RootModel,
