@@ -1,18 +1,18 @@
 package swagger
 
-type expanderCache struct {
+type ExpanderCache struct {
 	m map[string]*Property
 }
 
-func NewExpanderCache() *expanderCache {
-	return &expanderCache{m: map[string]*Property{}}
+func NewExpanderCache() *ExpanderCache {
+	return &ExpanderCache{m: map[string]*Property{}}
 }
 
-func (cache *expanderCache) save(exp *Expander) {
+func (cache *ExpanderCache) save(exp *Expander) {
 	cache.m[exp.cacheKey()] = exp.root
 }
 
-func (cache *expanderCache) load(exp *Expander) bool {
+func (cache *ExpanderCache) load(exp *Expander) bool {
 	prop, ok := cache.m[exp.cacheKey()]
 	if !ok {
 		return false

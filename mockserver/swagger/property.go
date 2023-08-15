@@ -18,6 +18,10 @@ type RootModelInfo struct {
 	Version   string            `json:"version"`
 }
 
+func (info RootModelInfo) String() string {
+	return info.PathRef.String() + ":" + info.Operation + ":" + info.Version
+}
+
 func (model RootModelInfo) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{
 		"path_ref":  model.PathRef.String(),

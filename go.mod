@@ -1,6 +1,6 @@
 module github.com/magodo/azure-rest-api-bridge
 
-go 1.20
+go 1.21
 
 require (
 	github.com/evanphx/json-patch/v5 v5.6.0
@@ -16,6 +16,7 @@ require (
 	github.com/rickb777/date v1.20.1
 	github.com/stretchr/testify v1.8.1
 	github.com/zclconf/go-cty v1.12.1
+	golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb
 )
 
 require (

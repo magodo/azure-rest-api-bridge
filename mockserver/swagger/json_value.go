@@ -8,17 +8,20 @@ import (
 	"github.com/go-openapi/jsonreference"
 )
 
+type primitiveType interface {
+	bool | float64 | string
+}
+
 type JSONValue interface {
 	JSONValue() interface{}
+
+	// Only JSONPrimitive returns non-nil
+	JSONValuePos() *JSONValuePos
 }
 
 type JSONObject struct {
 	value map[string]JSONValue
 	pos   *JSONValuePos
-}
-
-type primitiveType interface {
-	bool | float64 | string
 }
 
 func (obj JSONObject) JSONValue() interface{} {
@@ -27,6 +30,10 @@ func (obj JSONObject) JSONValue() interface{} {
 		m[k] = v.JSONValue()
 	}
 	return m
+}
+
+func (obj JSONObject) JSONValuePos() *JSONValuePos {
+	return nil
 }
 
 type JSONArray struct {
@@ -42,6 +49,10 @@ func (arr JSONArray) JSONValue() interface{} {
 	return l
 }
 
+func (arr JSONArray) JSONValuePos() *JSONValuePos {
+	return nil
+}
+
 type JSONPrimitive[T primitiveType] struct {
 	value T
 	pos   *JSONValuePos
@@ -49,6 +60,10 @@ type JSONPrimitive[T primitiveType] struct {
 
 func (p JSONPrimitive[T]) JSONValue() interface{} {
 	return p.value
+}
+
+func (p JSONPrimitive[T]) JSONValuePos() *JSONValuePos {
+	return p.pos
 }
 
 func walkJSONValue(val JSONValue, fn func(val JSONValue)) {
@@ -73,6 +88,10 @@ type JSONValuePos struct {
 	Addr       PropertyAddr      `json:"addr"`
 	LinkLocal  string            `json:"link_local,omitempty"`
 	LinkGithub string            `json:"link_github,omitempty"`
+}
+
+func (pos JSONValuePos) String() string {
+	return pos.RootModel.String() + ":" + pos.Addr.String()
 }
 
 func (pos JSONValuePos) MarshalJSON() ([]byte, error) {
@@ -161,6 +180,22 @@ func JSONValueValueMap(l ...JSONValue) (map[string]*JSONValuePos, error) {
 		}
 	}
 	return out, nil
+}
+
+func FlattenJSONValueObjectByAddr(obj JSONObject) map[string]JSONValue {
+	out := map[string]JSONValue{}
+	fn := func(val JSONValue) {
+		switch val := val.(type) {
+		case JSONPrimitive[float64]:
+			out[val.pos.Addr.String()] = val
+		case JSONPrimitive[string]:
+			out[val.pos.Addr.String()] = val
+		case JSONPrimitive[bool]:
+			out[val.pos.Addr.String()] = val
+		}
+	}
+	walkJSONValue(obj, fn)
+	return out
 }
 
 func UnmarshalJSONToJSONValue(b []byte, root *Property) (JSONValue, error) {
