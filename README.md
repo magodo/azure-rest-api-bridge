@@ -9,10 +9,8 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
 1. Clone the [Azure swagger repo](https://github.com/azure/azure-rest-api-specs), e.g., to `$HOME/github/azure-rest-api-specs`
 1. Build up the azure swagger index by using [azure-rest-api-index](https://github.com/magodo/azure-rest-api-index):
     ```shell
-    azure-rest-api-index build -o /tmp/index.json -dedup ./azure-rest-api-index/dedup.json $HOME/github/azure-rest-api-specs/specification
+    azure-rest-api-index build -o /tmp/index.json $HOME/github/azure-rest-api-specs/specification
     ```
-
-    Note that the `dedup.json` file is maintained by the `azure-rest-api-index` repo, so please clone the repo to get it.
 
 1. Spin up a metadata host by using [azure-metadata-proxy](https://github.com/magodo/azure-metadata-proxy):
 
