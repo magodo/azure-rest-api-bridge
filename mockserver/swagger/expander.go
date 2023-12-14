@@ -402,10 +402,13 @@ func (e *Expander) expandPropAsPolymorphicObject(prop *Property, varInfo Variant
 	prop.Variant = map[string]*Property{}
 	for vValue, vName := range varInfo.VariantValueToModel {
 		addr := append(PropertyAddr{}, prop.addr...)
-		addr = append(addr, PropertyAddrStep{
-			Type:  PropertyAddrStepTypeVariant,
-			Value: vValue,
-		})
+		if len(addr) == 0 {
+			addr = append(addr, PropertyAddrStep{Type: PropertyAddrStepTypeProp, Variant: vValue})
+		} else {
+			lastAddr := addr[len(addr)-1]
+			lastAddr.Variant = vValue
+			addr[len(addr)-1] = lastAddr
+		}
 		visited := map[string]bool{}
 		for k, v := range prop.visitedRefs {
 			// Remove the owning ref of the base schema from visited set in order to allow the later allOf inheritance.

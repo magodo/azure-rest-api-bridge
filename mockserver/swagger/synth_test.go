@@ -58,11 +58,11 @@ func TestSynthesize(t *testing.T) {
 				DuplicateElements: []SynthDuplicateElement{
 					{
 						Cnt:  1,
-						Addr: ParseAddr("array"),
+						Addr: MustParseAddr("array"),
 					},
 					{
 						Cnt:  2,
-						Addr: ParseAddr("map"),
+						Addr: MustParseAddr("map"),
 					},
 				},
 			},
@@ -215,7 +215,7 @@ func TestSynthesize(t *testing.T) {
 				DuplicateElements: []SynthDuplicateElement{
 					{
 						Cnt:  1,
-						Addr: ParseAddr(""),
+						Addr: MustParseAddr(""),
 					},
 				},
 			},

@@ -125,7 +125,11 @@ func (pos *JSONValuePos) UnmarshalJSON(b []byte) error {
 		pos.Ref = jsonreference.MustCreateRef(v.(string))
 	}
 	if v, ok := m["addr"]; ok {
-		pos.Addr = ParseAddr(v.(string))
+		addr, err := ParseAddr(v.(string))
+		if err != nil {
+			return err
+		}
+		pos.Addr = *addr
 	}
 	if v, ok := m["link_local"]; ok {
 		pos.LinkLocal = v.(string)

@@ -18,7 +18,7 @@ func TestMonomorphization(t *testing.T) {
 				addr: RootAddr,
 				Children: map[string]*Property{
 					"p1": {
-						addr: ParseAddr("p1"),
+						addr: MustParseAddr("p1"),
 					},
 				},
 			},
@@ -27,7 +27,7 @@ func TestMonomorphization(t *testing.T) {
 					addr: RootAddr,
 					Children: map[string]*Property{
 						"p1": {
-							addr: ParseAddr("p1"),
+							addr: MustParseAddr("p1"),
 						},
 					},
 				},
@@ -82,16 +82,16 @@ func TestMonomorphization(t *testing.T) {
 				addr: RootAddr,
 				Children: map[string]*Property{
 					"p1": {
-						addr: ParseAddr("p1"),
+						addr: MustParseAddr("p1"),
 						Variant: map[string]*Property{
 							"V1": {
-								addr: ParseAddr("p1"),
+								addr: MustParseAddr("p1"),
 							},
 							"V2": {
-								addr: ParseAddr("p1"),
+								addr: MustParseAddr("p1"),
 							},
 							"V3": {
-								addr: ParseAddr("p1"),
+								addr: MustParseAddr("p1"),
 							},
 						},
 					},
@@ -102,10 +102,10 @@ func TestMonomorphization(t *testing.T) {
 					addr: RootAddr,
 					Children: map[string]*Property{
 						"p1": {
-							addr: ParseAddr("p1"),
+							addr: MustParseAddr("p1"),
 							Variant: map[string]*Property{
 								"V1": {
-									addr: ParseAddr("p1"),
+									addr: MustParseAddr("p1"),
 								},
 							},
 						},
@@ -115,10 +115,10 @@ func TestMonomorphization(t *testing.T) {
 					addr: RootAddr,
 					Children: map[string]*Property{
 						"p1": {
-							addr: ParseAddr("p1"),
+							addr: MustParseAddr("p1"),
 							Variant: map[string]*Property{
 								"V2": {
-									addr: ParseAddr("p1"),
+									addr: MustParseAddr("p1"),
 								},
 							},
 						},
@@ -128,10 +128,10 @@ func TestMonomorphization(t *testing.T) {
 					addr: RootAddr,
 					Children: map[string]*Property{
 						"p1": {
-							addr: ParseAddr("p1"),
+							addr: MustParseAddr("p1"),
 							Variant: map[string]*Property{
 								"V3": {
-									addr: ParseAddr("p1"),
+									addr: MustParseAddr("p1"),
 								},
 							},
 						},
@@ -196,29 +196,29 @@ func TestMonomorphization(t *testing.T) {
 				addr: RootAddr,
 				Children: map[string]*Property{
 					"p1": {
-						addr: ParseAddr("p1"),
+						addr: MustParseAddr("p1"),
 						Element: &Property{
-							addr: ParseAddr("p1.*"),
+							addr: MustParseAddr("p1.*"),
 							Variant: map[string]*Property{
 								"V1": {
-									addr: ParseAddr("p1.*"),
+									addr: MustParseAddr("p1.*"),
 									Children: map[string]*Property{
 										"pp1": {
-											addr: ParseAddr("p1.*.pp1"),
+											addr: MustParseAddr("p1.*.pp1"),
 										},
 									},
 								},
 								"V2": {
-									addr: ParseAddr("p1.*"),
+									addr: MustParseAddr("p1.*"),
 									Children: map[string]*Property{
 										"pp1": {
-											addr: ParseAddr("p1.*.pp1"),
+											addr: MustParseAddr("p1.*.pp1"),
 											Variant: map[string]*Property{
 												"W1": {
-													addr: ParseAddr("p1.*.pp1"),
+													addr: MustParseAddr("p1.*.pp1"),
 												},
 												"W2": {
-													addr: ParseAddr("p1.*.pp1"),
+													addr: MustParseAddr("p1.*.pp1"),
 												},
 											},
 										},
@@ -234,15 +234,15 @@ func TestMonomorphization(t *testing.T) {
 					addr: RootAddr,
 					Children: map[string]*Property{
 						"p1": {
-							addr: ParseAddr("p1"),
+							addr: MustParseAddr("p1"),
 							Element: &Property{
-								addr: ParseAddr("p1.*"),
+								addr: MustParseAddr("p1.*"),
 								Variant: map[string]*Property{
 									"V1": {
-										addr: ParseAddr("p1.*"),
+										addr: MustParseAddr("p1.*"),
 										Children: map[string]*Property{
 											"pp1": {
-												addr: ParseAddr("p1.*.pp1"),
+												addr: MustParseAddr("p1.*.pp1"),
 											},
 										},
 									},
@@ -255,18 +255,18 @@ func TestMonomorphization(t *testing.T) {
 					addr: RootAddr,
 					Children: map[string]*Property{
 						"p1": {
-							addr: ParseAddr("p1"),
+							addr: MustParseAddr("p1"),
 							Element: &Property{
-								addr: ParseAddr("p1.*"),
+								addr: MustParseAddr("p1.*"),
 								Variant: map[string]*Property{
 									"V2": {
-										addr: ParseAddr("p1.*"),
+										addr: MustParseAddr("p1.*"),
 										Children: map[string]*Property{
 											"pp1": {
-												addr: ParseAddr("p1.*.pp1"),
+												addr: MustParseAddr("p1.*.pp1"),
 												Variant: map[string]*Property{
 													"W1": {
-														addr: ParseAddr("p1.*.pp1"),
+														addr: MustParseAddr("p1.*.pp1"),
 													},
 												},
 											},
@@ -281,18 +281,18 @@ func TestMonomorphization(t *testing.T) {
 					addr: RootAddr,
 					Children: map[string]*Property{
 						"p1": {
-							addr: ParseAddr("p1"),
+							addr: MustParseAddr("p1"),
 							Element: &Property{
-								addr: ParseAddr("p1.*"),
+								addr: MustParseAddr("p1.*"),
 								Variant: map[string]*Property{
 									"V2": {
-										addr: ParseAddr("p1.*"),
+										addr: MustParseAddr("p1.*"),
 										Children: map[string]*Property{
 											"pp1": {
-												addr: ParseAddr("p1.*.pp1"),
+												addr: MustParseAddr("p1.*.pp1"),
 												Variant: map[string]*Property{
 													"W2": {
-														addr: ParseAddr("p1.*.pp1"),
+														addr: MustParseAddr("p1.*.pp1"),
 													},
 												},
 											},

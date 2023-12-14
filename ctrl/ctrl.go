@@ -273,9 +273,13 @@ func (ctrl *Ctrl) execute(ctx context.Context, execution Execution, execIdx, exe
 				if eopt.Count != nil {
 					cnt = *eopt.Count
 				}
+				addr, err := swagger.ParseAddr(eopt.Addr)
+				if err != nil {
+					return nil, err
+				}
 				del = append(del, swagger.SynthDuplicateElement{
 					Cnt:  cnt,
-					Addr: swagger.ParseAddr(eopt.Addr),
+					Addr: *addr,
 				})
 			}
 			ov.SynthOption.DuplicateElements = del
@@ -450,7 +454,11 @@ func (ctrl *Ctrl) vibrate(ctx context.Context, execution Execution, vibration Vi
 	}
 	fltAPIModel := swagger.FlattenJSONValueObjectByAddr((*vibrationRecord).(swagger.JSONObject))
 	for k, v := range fltAPIModel {
-		ptr, err := swagger.ParseAddr(k).ToPointer()
+		addr, err := swagger.ParseAddr(k)
+		if err != nil {
+			return nil, err
+		}
+		ptr, err := addr.ToPointer()
 		if err != nil {
 			return nil, err
 		}

@@ -27,21 +27,21 @@ func TestJSONValueValueMap(t *testing.T) {
 							value: 0.5,
 							pos: &JSONValuePos{
 								Ref:  jsonreference.MustCreateRef("p1"),
-								Addr: ParseAddr("p1"),
+								Addr: MustParseAddr("p1"),
 							},
 						},
 						"p2": JSONPrimitive[string]{
 							value: "abc",
 							pos: &JSONValuePos{
 								Ref:  jsonreference.MustCreateRef("p2"),
-								Addr: ParseAddr("p2"),
+								Addr: MustParseAddr("p2"),
 							},
 						},
 						"p3": JSONPrimitive[bool]{
 							value: true,
 							pos: &JSONValuePos{
 								Ref:  jsonreference.MustCreateRef("p3"),
-								Addr: ParseAddr("p3"),
+								Addr: MustParseAddr("p3"),
 							},
 						},
 					},
@@ -50,15 +50,15 @@ func TestJSONValueValueMap(t *testing.T) {
 			expect: map[string]*JSONValuePos{
 				"0.5": {
 					Ref:  jsonreference.MustCreateRef("p1"),
-					Addr: ParseAddr("p1"),
+					Addr: MustParseAddr("p1"),
 				},
 				"abc": {
 					Ref:  jsonreference.MustCreateRef("p2"),
-					Addr: ParseAddr("p2"),
+					Addr: MustParseAddr("p2"),
 				},
 				"TRUE": {
 					Ref:  jsonreference.MustCreateRef("p3"),
-					Addr: ParseAddr("p3"),
+					Addr: MustParseAddr("p3"),
 				},
 			},
 		},
@@ -71,7 +71,7 @@ func TestJSONValueValueMap(t *testing.T) {
 							value: true,
 							pos: &JSONValuePos{
 								Ref:  jsonreference.MustCreateRef("*"),
-								Addr: ParseAddr("*"),
+								Addr: MustParseAddr("*"),
 							},
 						},
 					},
@@ -80,7 +80,7 @@ func TestJSONValueValueMap(t *testing.T) {
 			expect: map[string]*JSONValuePos{
 				"TRUE": {
 					Ref:  jsonreference.MustCreateRef("*"),
-					Addr: ParseAddr("*"),
+					Addr: MustParseAddr("*"),
 				},
 			},
 		},
@@ -93,21 +93,21 @@ func TestJSONValueValueMap(t *testing.T) {
 							value: 0.5,
 							pos: &JSONValuePos{
 								Ref:  jsonreference.MustCreateRef("p1"),
-								Addr: ParseAddr("p1"),
+								Addr: MustParseAddr("p1"),
 							},
 						},
 						"p2": JSONPrimitive[string]{
 							value: "abc",
 							pos: &JSONValuePos{
 								Ref:  jsonreference.MustCreateRef("p2"),
-								Addr: ParseAddr("p2"),
+								Addr: MustParseAddr("p2"),
 							},
 						},
 						"p3": JSONPrimitive[bool]{
 							value: true,
 							pos: &JSONValuePos{
 								Ref:  jsonreference.MustCreateRef("p3"),
-								Addr: ParseAddr("p3"),
+								Addr: MustParseAddr("p3"),
 							},
 						},
 					},
@@ -118,7 +118,7 @@ func TestJSONValueValueMap(t *testing.T) {
 							value: true,
 							pos: &JSONValuePos{
 								Ref:  jsonreference.MustCreateRef("*"),
-								Addr: ParseAddr("*"),
+								Addr: MustParseAddr("*"),
 							},
 						},
 					},
@@ -127,11 +127,11 @@ func TestJSONValueValueMap(t *testing.T) {
 			expect: map[string]*JSONValuePos{
 				"0.5": {
 					Ref:  jsonreference.MustCreateRef("p1"),
-					Addr: ParseAddr("p1"),
+					Addr: MustParseAddr("p1"),
 				},
 				"abc": {
 					Ref:  jsonreference.MustCreateRef("p2"),
-					Addr: ParseAddr("p2"),
+					Addr: MustParseAddr("p2"),
 				},
 			},
 		},
@@ -188,20 +188,20 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 								value: "b",
 								pos: &JSONValuePos{
 									Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/array/items"),
-									Addr: ParseAddr("array.*"),
+									Addr: MustParseAddr("array.*"),
 								},
 							},
 						},
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/array"),
-							Addr: ParseAddr("array"),
+							Addr: MustParseAddr("array"),
 						},
 					},
 					"boolean": JSONPrimitive[bool]{
 						value: true,
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/boolean"),
-							Addr: ParseAddr("boolean"),
+							Addr: MustParseAddr("boolean"),
 						},
 					},
 					"emptyObject": JSONObject{
@@ -213,14 +213,14 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 						},
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/emptyObject"),
-							Addr: ParseAddr("emptyObject"),
+							Addr: MustParseAddr("emptyObject"),
 						},
 					},
 					"integer": JSONPrimitive[float64]{
 						value: 1,
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/integer"),
-							Addr: ParseAddr("integer"),
+							Addr: MustParseAddr("integer"),
 						},
 					},
 					"map": JSONObject{
@@ -229,20 +229,20 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 								value: "c",
 								pos: &JSONValuePos{
 									Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/map/additionalProperties"),
-									Addr: ParseAddr("map.*"),
+									Addr: MustParseAddr("map.*"),
 								},
 							},
 						},
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/map"),
-							Addr: ParseAddr("map"),
+							Addr: MustParseAddr("map"),
 						},
 					},
 					"number": JSONPrimitive[float64]{
 						value: 1.5,
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/number"),
-							Addr: ParseAddr("number"),
+							Addr: MustParseAddr("number"),
 						},
 					},
 					"object": JSONObject{
@@ -251,7 +251,7 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 								value: "d",
 								pos: &JSONValuePos{
 									Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/object/properties/p1"),
-									Addr: ParseAddr("object.p1"),
+									Addr: MustParseAddr("object.p1"),
 								},
 							},
 							"obj": JSONObject{
@@ -260,32 +260,32 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 										value: 2,
 										pos: &JSONValuePos{
 											Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/object/properties/obj/properties/pp1"),
-											Addr: ParseAddr("object.obj.pp1"),
+											Addr: MustParseAddr("object.obj.pp1"),
 										},
 									},
 								},
 								pos: &JSONValuePos{
 									Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/object/properties/obj"),
-									Addr: ParseAddr("object.obj"),
+									Addr: MustParseAddr("object.obj"),
 								},
 							},
 						},
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/object"),
-							Addr: ParseAddr("object"),
+							Addr: MustParseAddr("object"),
 						},
 					},
 					"string": JSONPrimitive[string]{
 						value: "e",
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object/properties/string"),
-							Addr: ParseAddr("string"),
+							Addr: MustParseAddr("string"),
 						},
 					},
 				},
 				pos: &JSONValuePos{
 					Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/object"),
-					Addr: ParseAddr(""),
+					Addr: MustParseAddr(""),
 				},
 			},
 		},
@@ -302,20 +302,20 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 						value: "var1",
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/base/properties/type"),
-							Addr: ParseAddr("{var1}.type"),
+							Addr: MustParseAddr("{var1}.type"),
 						},
 					},
 					"prop1": JSONPrimitive[string]{
 						value: "foo",
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/var1/properties/prop1"),
-							Addr: ParseAddr("{var1}.prop1"),
+							Addr: MustParseAddr("{var1}.prop1"),
 						},
 					},
 				},
 				pos: &JSONValuePos{
 					Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/var1"),
-					Addr: ParseAddr("{var1}"),
+					Addr: MustParseAddr("{var1}"),
 				},
 			},
 		},
@@ -336,26 +336,26 @@ func TestUnmarshalJSONToJSONValue(t *testing.T) {
 								value: "var1",
 								pos: &JSONValuePos{
 									Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/base/properties/type"),
-									Addr: ParseAddr("prop.{var1}.type"),
+									Addr: MustParseAddr("prop{var1}.type"),
 								},
 							},
 							"prop1": JSONPrimitive[string]{
 								value: "foo",
 								pos: &JSONValuePos{
 									Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/var1/properties/prop1"),
-									Addr: ParseAddr("prop.{var1}.prop1"),
+									Addr: MustParseAddr("prop{var1}.prop1"),
 								},
 							},
 						},
 						pos: &JSONValuePos{
 							Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/var1"),
-							Addr: ParseAddr("prop.{var1}"),
+							Addr: MustParseAddr("prop{var1}"),
 						},
 					},
 				},
 				pos: &JSONValuePos{
 					Ref:  jsonreference.MustCreateRef(specpathSyn + "#/definitions/use_base"),
-					Addr: ParseAddr(""),
+					Addr: MustParseAddr(""),
 				},
 			},
 		},
