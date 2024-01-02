@@ -96,7 +96,7 @@ Following example will try to run this tool to map terraform-provider-azurerm sc
         ],
         "/tags/KEY": [
           {
-            "addr": "tags.*",
+            "addr": "tags/*",
             "link_github": "https://github.com/Azure/azure-rest-api-specs/blob/fe78d8f1e7bd86c778c7e1cafd52cb0e9fec67ef/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#L5449",
             "link_local": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json:5449:35",
             "ref": "/home/magodo/github/azure-rest-api-specs/specification/resources/resource-manager/Microsoft.Resources/stable/2020-06-01/resources.json#/definitions/ResourceGroup/properties/tags/additionalProperties"

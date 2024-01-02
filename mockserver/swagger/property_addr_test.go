@@ -70,7 +70,7 @@ func TestParseAddr(t *testing.T) {
 			},
 		},
 		{
-			input: "a.b",
+			input: "a/b",
 			expect: PropertyAddr{
 				{
 					Type:  PropertyAddrStepTypeProp,
@@ -83,16 +83,16 @@ func TestParseAddr(t *testing.T) {
 			},
 		},
 		{
-			input: "a\\.b",
+			input: "a\\/b",
 			expect: PropertyAddr{
 				{
 					Type:  PropertyAddrStepTypeProp,
-					Value: "a.b",
+					Value: "a/b",
 				},
 			},
 		},
 		{
-			input: "a.*.b",
+			input: "a/*/b",
 			expect: PropertyAddr{
 				{
 					Type:  PropertyAddrStepTypeProp,
@@ -108,7 +108,7 @@ func TestParseAddr(t *testing.T) {
 			},
 		},
 		{
-			input: "a.*{Foo}.b",
+			input: "a/*{Foo}/b",
 			expect: PropertyAddr{
 				{
 					Type:  PropertyAddrStepTypeProp,
@@ -125,7 +125,7 @@ func TestParseAddr(t *testing.T) {
 			},
 		},
 		{
-			input: "a{Foo}.b",
+			input: "a{Foo}/b",
 			expect: PropertyAddr{
 				{
 					Type:    PropertyAddrStepTypeProp,
@@ -139,12 +139,12 @@ func TestParseAddr(t *testing.T) {
 			},
 		},
 		{
-			input: "a{Foo.Bar}.b",
+			input: "a{Foo/Bar}/b",
 			expect: PropertyAddr{
 				{
 					Type:    PropertyAddrStepTypeProp,
 					Value:   "a",
-					Variant: "Foo.Bar",
+					Variant: "Foo/Bar",
 				},
 				{
 					Type:  PropertyAddrStepTypeProp,
@@ -153,12 +153,12 @@ func TestParseAddr(t *testing.T) {
 			},
 		},
 		{
-			input: `a{Foo.{Bar\}}.b`,
+			input: `a{Foo/{Bar\}}/b`,
 			expect: PropertyAddr{
 				{
 					Type:    PropertyAddrStepTypeProp,
 					Value:   "a",
-					Variant: "Foo.{Bar}",
+					Variant: "Foo/{Bar}",
 				},
 				{
 					Type:  PropertyAddrStepTypeProp,
@@ -171,7 +171,7 @@ func TestParseAddr(t *testing.T) {
 			iserr: true,
 		},
 		{
-			input: `.`,
+			input: `/`,
 			iserr: true,
 		},
 		{
@@ -265,16 +265,16 @@ func TestPropertyAddrString(t *testing.T) {
 					Value: "b",
 				},
 			},
-			expect: "a.b",
+			expect: "a/b",
 		},
 		{
 			input: PropertyAddr{
 				{
 					Type:  PropertyAddrStepTypeProp,
-					Value: "a.b",
+					Value: "a/b",
 				},
 			},
-			expect: "a\\.b",
+			expect: "a\\/b",
 		},
 		{
 			input: PropertyAddr{
@@ -290,7 +290,7 @@ func TestPropertyAddrString(t *testing.T) {
 					Value: "b",
 				},
 			},
-			expect: "a.*.b",
+			expect: "a/*/b",
 		},
 		{
 			input: PropertyAddr{
@@ -307,7 +307,7 @@ func TestPropertyAddrString(t *testing.T) {
 					Value: "b",
 				},
 			},
-			expect: "a.*{Foo}.b",
+			expect: "a/*{Foo}/b",
 		},
 		{
 			input: PropertyAddr{
@@ -321,35 +321,35 @@ func TestPropertyAddrString(t *testing.T) {
 					Value: "b",
 				},
 			},
-			expect: "a{Foo}.b",
+			expect: "a{Foo}/b",
 		},
 		{
 			input: PropertyAddr{
 				{
 					Type:    PropertyAddrStepTypeProp,
 					Value:   "a",
-					Variant: "Foo.Bar",
+					Variant: "Foo/Bar",
 				},
 				{
 					Type:  PropertyAddrStepTypeProp,
 					Value: "b",
 				},
 			},
-			expect: "a{Foo.Bar}.b",
+			expect: "a{Foo/Bar}/b",
 		},
 		{
 			input: PropertyAddr{
 				{
 					Type:    PropertyAddrStepTypeProp,
 					Value:   "a",
-					Variant: "Foo.{Bar}",
+					Variant: "Foo/{Bar}",
 				},
 				{
 					Type:  PropertyAddrStepTypeProp,
 					Value: "b",
 				},
 			},
-			expect: `a{Foo.{Bar\}}.b`,
+			expect: `a{Foo/{Bar\}}/b`,
 		},
 	}
 	for _, tt := range cases {

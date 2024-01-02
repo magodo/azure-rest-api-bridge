@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	delimRune        rune = '.'
+	delimRune        rune = '/'
 	variantOpenRune       = '{'
 	variantCloseRune      = '}'
 	escapeRune            = '\\'
