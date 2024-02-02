@@ -47,6 +47,8 @@ type Overrides []Override
 type Override struct {
 	PathPattern regexp.Regexp
 
+	RequestModify *swagger.RequestDescriptor
+
 	ResponseSelectorMerge string
 	ResponseSelectorJSON  string
 
@@ -54,7 +56,8 @@ type Override struct {
 	ResponsePatchMerge string
 	ResponsePatchJSON  string
 
-	ResponseHeader map[string]string
+	ResponseHeader     map[string]string
+	ResponseStatusCode int
 
 	SynthOption    *swagger.SynthesizerOption
 	ExpanderOption *swagger.ExpanderOption
@@ -120,10 +123,16 @@ func (srv *Server) writeError(w http.ResponseWriter, err error) {
 
 func (srv *Server) setHeader(w http.ResponseWriter, r *http.Request, ov *Override) {
 	w.Header().Set("Content-Type", "application/json")
-	if ov != nil && len(ov.ResponseHeader) != 0 {
-		log.Debug("override", "type", "header", "url", r.URL.String(), "value", ov.ResponseHeader)
-		for k, v := range ov.ResponseHeader {
-			w.Header().Set(k, v)
+	if ov != nil {
+		if len(ov.ResponseHeader) != 0 {
+			log.Debug("override", "type", "header", "url", r.URL.String(), "value", ov.ResponseHeader)
+			for k, v := range ov.ResponseHeader {
+				w.Header().Set(k, v)
+			}
+		}
+		if ov.ResponseStatusCode != 0 {
+			log.Debug("override", "type", "status_code", "url", r.URL.String(), "value", ov.ResponseHeader)
+			w.WriteHeader(ov.ResponseStatusCode)
 		}
 	}
 }
@@ -147,6 +156,11 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Otherwise, we'll synthesize the response based on its swagger definition
+
+	if ov != nil && ov.RequestModify != nil {
+		srv.modifyRequest(r, *ov.RequestModify)
+	}
+
 	var (
 		synthOpt    *swagger.SynthesizerOption
 		expanderOpt *swagger.ExpanderOption
@@ -223,6 +237,18 @@ func (srv *Server) Handle(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseBody)
 
 	return
+}
+
+func (srv *Server) modifyRequest(req *http.Request, desc swagger.RequestDescriptor) {
+	if desc.Method != "" {
+		req.Method = desc.Method
+	}
+	if desc.Path != "" {
+		req.URL.Path = desc.Path
+	}
+	if desc.Version != "" {
+		req.URL.Query()["api-version"] = []string{desc.Version}
+	}
 }
 
 func (srv *Server) vibrateResponse(uRL url.URL, response []byte) ([]byte, bool, error) {

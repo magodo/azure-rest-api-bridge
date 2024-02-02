@@ -98,7 +98,7 @@ func NewCtrl(opt Option) (*Ctrl, error) {
 func validateExecSpec(spec Config) error {
 	validateOverride := func(ovs []Override) error {
 		for _, ov := range ovs {
-			if ov.ResponseBody+ov.ResponseSelectorMerge+ov.ResponseSelectorJSON+ov.ResponsePatchJSON+ov.ResponsePatchMerge == "" && len(ov.ResponseHeader) == 0 && ov.ExpanderOption == nil && ov.SynthOption == nil {
+			if ov.ResponseBody+ov.ResponseSelectorMerge+ov.ResponseSelectorJSON+ov.ResponsePatchJSON+ov.ResponsePatchMerge == "" && len(ov.ResponseHeader) == 0 && ov.ResponseStatusCode == 0 && ov.RequestModify == nil && ov.ExpanderOption == nil && ov.SynthOption == nil {
 				return fmt.Errorf("empty override block is not allowed")
 			}
 			if ov.ResponseBody != "" {
@@ -252,16 +252,31 @@ func (ctrl *Ctrl) execute(ctx context.Context, execution Execution, execIdx, exe
 	for _, override := range overrides {
 		ov := mockserver.Override{
 			PathPattern:           *regexp.MustCompile(override.PathPattern),
+			RequestModify:         nil,
 			ResponseSelectorMerge: override.ResponseSelectorMerge,
 			ResponseSelectorJSON:  override.ResponseSelectorJSON,
 			ResponseBody:          override.ResponseBody,
 			ResponsePatchMerge:    override.ResponsePatchMerge,
 			ResponsePatchJSON:     override.ResponsePatchJSON,
 			ResponseHeader:        override.ResponseHeader,
+			ResponseStatusCode:    override.ResponseStatusCode,
 			SynthOption:           &swagger.SynthesizerOption{},
 			ExpanderOption: &swagger.ExpanderOption{
 				Cache: ctrl.expanderCache,
 			},
+		}
+		if ptr := override.RequestModify; ptr != nil {
+			modifier := &swagger.RequestDescriptor{}
+			if ptr.Method != "" {
+				modifier.Method = ptr.Method
+			}
+			if ptr.Path != "" {
+				modifier.Path = ptr.Path
+			}
+			if ptr.Version != "" {
+				modifier.Version = ptr.Version
+			}
+			ov.RequestModify = modifier
 		}
 		if opt := override.SynthOption; opt != nil {
 			if opt.UseEnumValue {
