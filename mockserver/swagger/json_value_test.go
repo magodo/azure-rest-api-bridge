@@ -384,6 +384,7 @@ func TestUnmarshalJSONValuePos(t *testing.T) {
   },
   "ref": "p1#/foo/bar",
   "addr": "a.b",
+  "description": "foo description",
   "link_local": "p1/p2:1:2",
   "link_github": "https://github.com/blah"
 }`)
